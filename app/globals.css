@@ -67,7 +67,30 @@ a { color: inherit; text-decoration: none; }
 .buddy-face { position:relative; width:116px; height:88px; border-radius:44px; background:#f8fbff; }
 .buddy-eyes::before,.buddy-eyes::after { content:""; position:absolute; top:28px; width:12px; height:17px; border-radius:9px; background:var(--navy); }
 .buddy-eyes::before { left:28px; }.buddy-eyes::after { right:28px; }
-.buddy-smile { position:absolute; left:50%; bottom:18px; width:31px; height:15px; border-bottom:4px solid var(--navy); border-radius:0 0 22px 22px; transform:translateX(-50%); }
+.buddy-mouth {
+  --mouth-level: 0;
+  position:absolute;
+  left:50%;
+  bottom:16px;
+  width:32px;
+  height:14px;
+  overflow:hidden;
+  border:3px solid #263552;
+  border-top-width:2px;
+  border-radius:8px 8px 18px 18px;
+  background:linear-gradient(180deg,#342b43 0%,#171525 76%);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.38),0 1px 0 rgba(255,255,255,.75);
+  transform:translateX(-50%) scaleY(.18);
+  transform-origin:center top;
+  transition:width 70ms linear,height 70ms linear,border-radius 70ms linear,transform 70ms linear;
+}
+.buddy-mouth-inner { position:absolute; inset:0; border-radius:inherit; background:radial-gradient(ellipse at 50% -10%,rgba(255,255,255,.23),transparent 46%); }
+.buddy-tongue { position:absolute; left:50%; bottom:-2px; width:24px; height:9px; border-radius:50% 50% 35% 35%; background:linear-gradient(#ff9eab,#e8788d); transform:translateX(-50%); box-shadow:inset 0 2px 2px rgba(255,255,255,.25); }
+.buddy-mouth.is-speaking { transform:translateX(-50%) scaleY(calc(.55 + var(--mouth-level) * 1.15)); }
+.buddy-mouth-small { width:24px; height:12px; border-radius:10px 10px 16px 16px; }
+.buddy-mouth-wide { width:41px; height:17px; border-radius:9px 9px 22px 22px; }
+.buddy-mouth-round { width:27px; height:23px; border-radius:48%; transform-origin:center center; }
+.buddy-mouth-round.is-speaking { transform:translateX(-50%) scale(calc(.72 + var(--mouth-level) * .35)); }
 .buddy-cheek::before,.buddy-cheek::after { content:""; position:absolute; top:52px; width:13px; height:7px; border-radius:50%; background:#ffb3a9; opacity:.75; }
 .buddy-cheek::before { left:16px; }.buddy-cheek::after { right:16px; }
 .buddy-star { position:absolute; right:8px; top:13px; display:grid; place-items:center; width:48px; height:48px; border-radius:17px; background:var(--yellow); font-size:24px; transform:rotate(9deg); box-shadow:0 8px 18px rgba(217,166,31,.22); }

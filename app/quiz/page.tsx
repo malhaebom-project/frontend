@@ -7,6 +7,7 @@ import { Buddy } from "../components";
 import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { learningState, saveSessionValue } from "@/lib/api/session";
 import type { Question } from "@/lib/api/types";
+import { playCharacterSpeech, stopCharacterSpeech } from "@/lib/character-speech";
 
 type Status="loading"|"idle"|"recording"|"processing"|"error";
 
@@ -18,6 +19,7 @@ export default function QuizPage() {
     if(!session){router.replace("/setup");return;}
     api.nextQuestion(session.sessionId).then(data=>{setQuestion(data);saveSessionValue("question",data);setStatus("idle");setMessage("버튼을 누르고 영어로 말해보세요.");}).catch(e=>{setStatus("error");setMessage(errorMessage(e));});
   },[router,session]);
+  useEffect(()=>()=>stopCharacterSpeech(),[]);
 
   async function startRecording(){
     if(!question||!session)return;
@@ -40,12 +42,12 @@ export default function QuizPage() {
       saveSessionValue("feedback",feedback);router.push("/feedback");
     } catch(e){setStatus("error");setMessage(errorMessage(e));}
   }
-  async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);if(data.hintTtsUrl)new Audio(data.hintTtsUrl).play().catch(()=>{});}catch(e){setMessage(errorMessage(e));}}
-  function replay(){if(question?.ttsUrl)new Audio(question.ttsUrl).play().catch(()=>setMessage("음성을 재생하지 못했어요."));}
+  async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playCharacterSpeech({url:data.hintTtsUrl,text:data.hintText,lang:"ko-KR"}).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
+  function replay(){if(question)playCharacterSpeech({url:question.ttsUrl,text:question.questionText,lang:"en-US"}).catch(()=>setMessage("음성을 재생하지 못했어요."));}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">
-    <header className="flex min-h-[88px] items-center gap-5"><Link href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-[#4f7df3]">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-[#fff6d7] text-[#9d7600]">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
-    <section className="grid items-center gap-8 py-4 lg:grid-cols-[.75fr_1.25fr]"><div className="flex flex-col items-center"><Buddy className={status==="processing"?"float":""}/><div className="speech mt-5 w-full max-w-[410px] text-center"><p className="mb-2 text-sm font-extrabold text-[#4f7df3]">{question?.questionTextKo??"문제를 불러오는 중"}</p><h1 className="speech-en">{question?.questionText??"…"}</h1><button onClick={replay} disabled={!question?.ttsUrl} className="btn btn-ghost mt-4 text-sm disabled:opacity-40">🔊 다시 듣기</button></div></div>
+    <header className="flex min-h-[88px] items-center gap-5"><Link onClick={stopCharacterSpeech} href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-[#4f7df3]">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-[#fff6d7] text-[#9d7600]">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
+    <section className="grid items-center gap-8 py-4 lg:grid-cols-[.75fr_1.25fr]"><div className="flex flex-col items-center"><Buddy className={status==="processing"?"float":""}/><div className="speech mt-5 w-full max-w-[410px] text-center"><p className="mb-2 text-sm font-extrabold text-[#4f7df3]">{question?.questionTextKo??"문제를 불러오는 중"}</p><h1 className="speech-en">{question?.questionText??"…"}</h1><button onClick={replay} disabled={!question} className="btn btn-ghost mt-4 text-sm disabled:opacity-40">🔊 다시 듣기</button></div></div>
       <div className="card relative overflow-hidden p-6 md:p-9"><span className="absolute right-5 top-5 z-10 pill">{question?.type==="PICTURE_DESCRIPTION"?"그림 보고 말하기":"영어로 말하기"}</span><div className="grid min-h-[330px] place-items-center rounded-[24px] bg-gradient-to-br from-[#fff8df] to-[#fff1e8] bg-contain bg-center bg-no-repeat" style={question?.imageUrl?{backgroundImage:`url("${question.imageUrl.replaceAll('"','%22')}")`}:undefined}>{!question?.imageUrl&&<span className="text-[110px]" aria-hidden>💬</span>}</div></div>
     </section>
     <section className="mx-auto max-w-3xl pb-12 pt-4 text-center"><h2 className={`text-2xl font-black ${status==="recording"?"text-[#e56f60]":""}`}>{message}</h2>{hint&&<p className="mx-auto mt-3 max-w-xl rounded-2xl bg-[#fff6d7] p-3 font-bold text-[#7f640d]">💡 {hint}</p>}{status==="recording"&&<Waveform/>}{status==="processing"&&<Dots/>}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthButton, CurrentProfileBadge } from "./auth-button";
+import { CharacterMouth } from "./character-mouth";
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -17,7 +18,7 @@ export function Buddy({ className = "" }: { className?: string }) {
         <div className="buddy-face">
           <span className="buddy-eyes" />
           <span className="buddy-cheek" />
-          <span className="buddy-smile" />
+          <CharacterMouth />
         </div>
       </div>
       <span className="buddy-star" aria-hidden="true">★</span>

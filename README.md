@@ -62,6 +62,12 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8080/api/v1
 NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true
 ```
 
+브라우저 음성 합성은 밝고 또렷한 여성 음성을 자동으로 우선 선택합니다. 테스트할 컴퓨터에 설치된 특정 음성을 사용하려면 음성 이름의 일부를 지정할 수 있습니다.
+
+```env
+NEXT_PUBLIC_TTS_VOICE_NAME=Samantha
+```
+
 ### 4. 개발 서버 실행
 
 ```bash
