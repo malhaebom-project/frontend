@@ -1,30 +1,32 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Buddy, Brand } from "../components";
+import { api, errorMessage } from "@/lib/api/client";
+import { learningState, saveSessionValue } from "@/lib/api/session";
+import type { AnswerFeedback } from "@/lib/api/types";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export default function FeedbackPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-emerald-50 px-6 py-10">
-      <section className="w-full max-w-3xl rounded-3xl bg-white p-8 text-center shadow-md sm:p-12">
-        <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-emerald-100 text-6xl" aria-hidden="true">
-          ⭐
-        </div>
-        <p className="mt-6 text-xl font-bold text-emerald-700">참 잘했어요!</p>
-        <h1 className="mt-2 text-4xl font-bold text-slate-800">It is an apple.</h1>
-        <p className="mt-4 text-lg text-slate-600">“apple”의 소리를 또박또박 잘 말했어요.</p>
-
-        <div className="mt-8 rounded-2xl bg-sky-50 p-5 text-left">
-          <p className="font-bold text-slate-800">한 번 더 들어볼까요?</p>
-          <p className="mt-2 text-lg text-slate-600">🔊 It is an ap-ple.</p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Link href="/quiz" className="rounded-2xl border-2 border-blue-600 px-6 py-4 text-lg font-bold text-blue-700 hover:bg-blue-50">
-            다시 말하기
-          </Link>
-          <Link href="/results" className="rounded-2xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-md hover:bg-blue-700">
-            다음으로 →
-          </Link>
-        </div>
-      </section>
-    </main>
-  );
+  const router=useRouter(); const hydrated=useHydrated(); const feedback:AnswerFeedback|null=hydrated?learningState.feedback():null; const [loading,setLoading]=useState(false); const [error,setError]=useState("");
+  useEffect(()=>{if(hydrated&&!feedback)router.replace("/quiz");},[router,hydrated,feedback]);
+  if(!feedback)return null;
+  const correct=feedback.result==="CORRECT"; const question=learningState.question(); const session=learningState.session(); const isLast=question&&question.questionIndex>=question.totalQuestionCount;
+  async function next(){
+    if(!session)return;setLoading(true);setError("");
+    try {if(isLast){const result=await api.completeSession(session.sessionId);saveSessionValue("result",result);router.push("/results");}else router.push("/quiz");}
+    catch(e){setError(errorMessage(e));setLoading(false);}
+  }
+  const feedbackTtsUrl=feedback.feedbackTtsUrl;
+  function replay(){if(feedbackTtsUrl)new Audio(feedbackTtsUrl).play().catch(()=>setError("피드백 음성을 재생하지 못했어요."));}
+  return <main className="page-shell"><div className="container"><header className="topbar"><Brand/><span className={`pill ${correct?"bg-[#fff6d7] text-[#9d7600]":"bg-[#eaf3ff] text-[#3f68d9]"}`}>{correct?"★ +1 획득!":"한 번 더 도전!"}</span></header>
+    <section className="mx-auto grid max-w-5xl items-center gap-8 py-10 lg:grid-cols-[.7fr_1.3fr]"><div className="relative text-center"><Buddy className="float mx-auto"/><div className="mt-3"><span className={`rounded-full px-5 py-2 font-black ${correct?"bg-[#e4f8f0] text-[#2b9e75]":"bg-[#fff6d7] text-[#9d7600]"}`}>정확도 {feedback.score}%</span></div></div>
+      <div><p className="eyebrow">{correct?"Amazing work!":"Keep going!"}</p><h1 className="display mt-2">{correct?"Great job! 🎉":"좋은 시도예요!"}</h1><p className="subtitle mt-3">{feedback.feedbackText}</p>
+        {error&&<div className="mt-4 rounded-2xl bg-[#fff6d7] p-4 font-bold text-[#7f640d]">{error}</div>}
+        <div className="card mt-7 p-7"><p className="text-sm font-extrabold text-[#71809d]">내가 말한 답</p><p className="mt-2 text-2xl font-black">{feedback.answerText||"인식된 답변이 없어요."}</p>{!correct&&<div className="mt-5 rounded-2xl bg-[#e4f8f0] p-4"><span className="text-xs font-extrabold text-[#2b9e75]">더 자연스러운 표현</span><p className="mb-0 mt-1 text-2xl font-black">{feedback.modelAnswer}</p></div>}<button onClick={replay} disabled={!feedback.feedbackTtsUrl} className="btn btn-secondary mt-5 disabled:opacity-40">🔊 피드백 듣기</button></div>
+        <div className="mt-6 flex flex-wrap gap-3">{feedback.canRetry&&<button onClick={()=>router.push("/quiz")} className="btn btn-secondary btn-large">다시 말하기</button>}<button onClick={next} disabled={loading} className="btn btn-primary btn-large flex-1">{loading?"결과 저장 중…":isLast?"학습 결과 보기":"다음 문제 →"}</button></div>
+      </div>
+    </section>
+  </div></main>;
 }

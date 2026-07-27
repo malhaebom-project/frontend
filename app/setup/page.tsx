@@ -1,44 +1,36 @@
-import Link from "next/link";
+"use client";
 
-const topics = [
-  { emoji: "🍎", name: "음식", detail: "좋아하는 음식을 말해요" },
-  { emoji: "🐶", name: "동물", detail: "귀여운 동물을 소개해요" },
-  { emoji: "🏫", name: "학교", detail: "학교에서 쓰는 말을 배워요" },
-];
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { BackLink, Brand, MiniProfile } from "../components";
+import { api, errorMessage } from "@/lib/api/client";
+import { learningState, saveSessionValue } from "@/lib/api/session";
+import type { Difficulty, LearningTopic, QuestionType } from "@/lib/api/types";
+
+const topicArt:Record<string,[string,string]>= {ANIMAL:["🦁","soft-yellow"],FOOD:["🍎","soft-coral"],DAILY_LIFE:["🏡","soft-mint"]};
 
 export default function SetupPage() {
-  return (
-    <main className="min-h-screen bg-amber-50 px-6 py-10">
-      <section className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between gap-4">
-          <Link className="rounded-xl p-3 font-semibold text-slate-600 hover:bg-white" href="/profiles">
-            ← 프로필
-          </Link>
-          <span className="rounded-full bg-white px-4 py-2 font-bold text-slate-700 shadow-sm">
-            🌱 봄이
-          </span>
-        </div>
-
-        <div className="mt-12 text-center">
-          <p className="font-bold text-blue-700">학습 설정</p>
-          <h1 className="mt-2 text-4xl font-bold text-slate-800">오늘은 무엇을 말해볼까요?</h1>
-          <p className="mt-3 text-lg text-slate-600">관심 있는 주제를 하나 골라 주세요.</p>
-        </div>
-
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {topics.map((topic, index) => (
-            <Link
-              key={topic.name}
-              href="/quiz"
-              className={`flex min-h-64 flex-col items-center justify-center rounded-3xl border-4 bg-white p-7 text-center shadow-md transition hover:-translate-y-1 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-blue-600 ${index === 0 ? "border-blue-500" : "border-transparent"}`}
-            >
-              <span className="text-7xl" aria-hidden="true">{topic.emoji}</span>
-              <span className="mt-5 text-2xl font-bold text-slate-800">{topic.name}</span>
-              <span className="mt-2 text-slate-600">{topic.detail}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
-    </main>
-  );
+  const router=useRouter(); const [topics,setTopics]=useState<LearningTopic[]>([]); const [topicId,setTopicId]=useState<number>();
+  const [difficulty,setDifficulty]=useState<Difficulty>("EASY"); const [count,setCount]=useState(5); const [types,setTypes]=useState<QuestionType[]>([]);
+  const [availableTypes,setAvailableTypes]=useState<{code:QuestionType;name:string}[]>([]); const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+  const [child] = useState(() => learningState.child());
+  useEffect(()=>{
+    if(!child){router.replace("/profiles");return;}
+    Promise.all([api.topics(),api.questionTypes()]).then(([topicData,typeData])=>{setTopics(topicData);setTopicId(topicData[0]?.topicId);setAvailableTypes(typeData);setTypes(typeData.map(v=>v.code));}).catch(e=>setError(errorMessage(e)));
+  },[router,child]);
+  async function start(){
+    if(!child||!topicId||!types.length)return; setLoading(true);setError("");
+    try {const session=await api.createSession({childId:child.childId,topicId,difficulty,questionTypes:types,questionCount:count});saveSessionValue("session",session);router.push("/quiz");}
+    catch(e){setError(errorMessage(e));setLoading(false);}
+  }
+  return <main className="page-shell"><div className="container">
+    <header className="topbar"><Brand/><div className="flex items-center gap-2"><BackLink href="/profiles">프로필</BackLink><MiniProfile/></div></header>
+    <section className="mx-auto max-w-5xl py-10 text-center"><p className="eyebrow">Today&apos;s adventure</p><h1 className="title mt-3">오늘 무엇을 배워볼까요?</h1><p className="subtitle mt-3">게임을 고르듯 즐겁게 선택해 보세요.</p>
+      {error&&<div role="alert" className="mt-5 rounded-2xl bg-[#fff6d7] p-4 font-bold text-[#7f640d]">{error}</div>}
+      <div className="mt-10 grid gap-5 md:grid-cols-3">{topics.map(item=>{const [emoji,tone]=topicArt[item.code]??["💬","soft-blue"];const selected=topicId===item.topicId;return <button key={item.topicId} onClick={()=>setTopicId(item.topicId)} className={`card relative min-h-[210px] cursor-pointer p-6 transition hover:-translate-y-2 ${selected?"border-2 border-[#4f7df3]":""}`}>{selected&&<span className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-[#4f7df3] text-white">✓</span>}<span className={`mx-auto grid h-24 w-24 place-items-center rounded-[30px] ${tone} text-5xl`}>{emoji}</span><strong className="mt-4 block text-2xl">{item.name}</strong></button>})}</div>
+      <div className="card mt-7 grid gap-6 p-6 text-left md:grid-cols-3 md:p-8"><Choice label="난이도" values={[["EASY","초급"],["NORMAL","중급"],["HARD","고급"]]} selected={difficulty} onSelect={v=>setDifficulty(v as Difficulty)}/><Choice label="문제 수" values={[["5","5문제"],["10","10문제"]]} selected={String(count)} onSelect={v=>setCount(Number(v))}/><fieldset><legend className="mb-3 font-extrabold">문제 유형</legend><div className="space-y-2">{availableTypes.map(type=><label key={type.code} className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#f4f7fb] p-3 text-sm font-bold"><input type="checkbox" checked={types.includes(type.code)} onChange={()=>setTypes(prev=>prev.includes(type.code)?prev.filter(v=>v!==type.code):[...prev,type.code])}/>{type.name}</label>)}</div></fieldset></div>
+      <button onClick={start} disabled={loading||!topicId||!types.length} className="btn btn-primary btn-large mt-8 min-w-[260px] disabled:opacity-50">{loading?"학습 준비 중…":"학습 시작 →"}</button>
+    </section>
+  </div></main>;
 }
+function Choice({label,values,selected,onSelect}:{label:string;values:string[][];selected:string;onSelect:(v:string)=>void}){return <fieldset><legend className="mb-3 font-extrabold">{label}</legend><div className="grid grid-cols-2 gap-2">{values.map(([value,text])=><button type="button" key={value} onClick={()=>onSelect(value)} className={`btn px-3 ${selected===value?"bg-[#eaf3ff] text-[#3f68d9] ring-2 ring-[#4f7df3]":"bg-[#f4f7fb] text-[#71809d]"}`}>{selected===value&&"✓ "}{text}</button>)}</div></fieldset>}

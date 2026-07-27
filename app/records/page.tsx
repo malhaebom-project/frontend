@@ -1,56 +1,24 @@
-import Link from "next/link";
+"use client";
 
-const records = [
-  { date: "오늘", topic: "음식", score: "4 / 5", time: "8분" },
-  { date: "7월 20일", topic: "동물", score: "5 / 5", time: "10분" },
-  { date: "7월 18일", topic: "학교", score: "3 / 5", time: "7분" },
-];
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Brand, MiniProfile } from "../components";
+import { api, errorMessage } from "@/lib/api/client";
+import { learningState } from "@/lib/api/session";
+import type { HistoryItem, Statistics, WrongAnswer } from "@/lib/api/types";
 
 export default function RecordsPage() {
-  return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto max-w-5xl">
-        <Link className="rounded-xl p-3 font-semibold text-slate-600 hover:bg-white" href="/">
-          ← 시작 화면
-        </Link>
-        <div className="mt-10">
-          <p className="font-bold text-blue-700">보호자 화면</p>
-          <h1 className="mt-2 text-4xl font-bold text-slate-800">봄이의 학습 기록</h1>
-          <p className="mt-3 text-lg text-slate-600">최근 영어 말하기 활동을 확인해 보세요.</p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl bg-blue-600 p-6 text-white shadow-sm">
-            <p className="text-sm font-bold">이번 주 학습</p>
-            <p className="mt-2 text-4xl font-bold">3일</p>
-          </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold text-slate-500">말한 문장</p>
-            <p className="mt-2 text-4xl font-bold text-slate-800">15개</p>
-          </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-bold text-slate-500">평균 정확도</p>
-            <p className="mt-2 text-4xl font-bold text-slate-800">80%</p>
-          </div>
-        </div>
-
-        <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-xl font-bold text-slate-800">최근 학습</h2>
-          </div>
-          <ul className="divide-y divide-slate-200">
-            {records.map((record) => (
-              <li key={record.date} className="grid grid-cols-2 gap-3 px-6 py-5 sm:grid-cols-4">
-                <span className="font-bold text-slate-800">{record.date}</span>
-                <span className="text-slate-600">{record.topic}</span>
-                <span className="text-slate-600">정확도 {record.score}</span>
-                <span className="text-right text-slate-500">{record.time}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="mt-4 text-sm text-slate-500">현재 기록은 화면 구성을 확인하기 위한 예시 데이터입니다.</p>
+  const router=useRouter(); const [child]=useState(()=>learningState.child()); const [history,setHistory]=useState<HistoryItem[]>([]); const [stats,setStats]=useState<Statistics|null>(null); const [wrong,setWrong]=useState<WrongAnswer[]>([]); const [error,setError]=useState(""); const [loading,setLoading]=useState(true);
+  useEffect(()=>{if(!child){router.replace("/profiles");return;}Promise.all([api.history(child.childId,"?page=0&size=10"),api.statistics(child.childId),api.wrongAnswers(child.childId)]).then(([h,s,w])=>{setHistory(h.content);setStats(s);setWrong(w);}).catch(e=>setError(errorMessage(e))).finally(()=>setLoading(false));},[router,child]);
+  return <main className="min-h-screen bg-[#f5f8fc]"><div className="border-b border-[#e1e9f4] bg-white"><header className="topbar container"><Brand/><div className="flex items-center gap-3"><MiniProfile/><Link href="/" className="btn btn-ghost">아이 화면으로</Link></div></header></div>
+    <div className="container py-12"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Parent dashboard</p><h1 className="title mt-2">학습 기록</h1><p className="subtitle mb-0 mt-2">{child?.nickname??"아이"}의 영어 자신감이 얼마나 자랐는지 확인해 보세요.</p></div><span className="pill">최근 기록</span></div>
+      {error&&<div role="alert" className="mt-6 rounded-2xl bg-[#fff6d7] p-4 font-bold text-[#7f640d]">{error}</div>}{loading?<div className="py-24 text-center text-[#71809d]">학습 기록을 불러오고 있어요…</div>:<>
+      <section className="mt-8 grid gap-4 md:grid-cols-4">{[["📅",`${stats?.totalSessionCount??0}회`,"총 학습 횟수","soft-blue"],["◎",`${stats?.averageCorrectRate??0}%`,"평균 정답률","soft-mint"],["🔥",`${stats?.consecutiveStudyDays??0}일`,"연속 학습","soft-coral"],["⏱",`${Math.round((stats?.totalStudySeconds??0)/60)}분`,"총 학습 시간","soft-yellow"]].map(([icon,value,label,tone])=><div key={label} className="card flex items-center gap-4 p-5 shadow-sm"><span className={`stat-icon ${tone}`}>{icon}</span><div><strong className="text-2xl">{value}</strong><p className="m-0 mt-1 text-xs font-bold text-[#71809d]">{label}</p></div></div>)}</section>
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="card p-7 shadow-sm"><p className="m-0 text-sm font-extrabold text-[#71809d]">주제별 학습</p><h2 className="mb-6 mt-1 text-xl font-black">정답률</h2><div className="space-y-5">{stats?.topicStatistics.map(topic=><div key={topic.topicName}><div className="mb-2 flex justify-between text-sm font-extrabold"><span>{topic.topicName} · {topic.questionCount}문제</span><span>{topic.correctRate}%</span></div><div className="progress"><span style={{width:`${topic.correctRate}%`}}/></div></div>)}{!stats?.topicStatistics.length&&<p className="text-[#71809d]">아직 주제별 통계가 없어요.</p>}</div></div>
+        <div className="card p-7 shadow-sm"><p className="m-0 text-sm font-extrabold text-[#71809d]">다시 연습할 표현</p><h2 className="mb-5 mt-1 text-xl font-black">최근 오답</h2>{wrong[0]?<div className="rounded-2xl bg-[#fff8df] p-5"><p className="m-0 text-sm text-[#71809d]">{wrong[0].questionText}</p><p className="mb-1 mt-3 text-sm line-through">{wrong[0].answerText}</p><p className="m-0 text-lg font-black">{wrong[0].modelAnswer}</p></div>:<p className="rounded-2xl bg-[#e4f8f0] p-5 font-bold text-[#2b9e75]">아직 저장된 오답이 없어요!</p>}</div>
       </section>
-    </main>
-  );
+      <section className="card mt-6 overflow-hidden shadow-sm"><div className="border-b border-[#e5edf8] px-7 py-6"><h2 className="m-0 text-xl font-black">최근 학습</h2></div><div className="divide-y divide-[#e5edf8]">{history.map(item=><div key={item.sessionId} className="grid items-center gap-4 px-7 py-5 sm:grid-cols-[1fr_1fr_1.3fr_auto]"><div><strong className="block">{new Date(item.completedAt).toLocaleDateString("ko-KR")}</strong><span className="text-sm text-[#71809d]">{Math.round(item.studySeconds/60)}분 학습</span></div><span className="font-bold">{item.topicName} · {item.difficulty==="EASY"?"초급":item.difficulty==="NORMAL"?"중급":"고급"}</span><div><div className="mb-2 flex justify-between text-xs font-extrabold"><span>{item.correctCount}/{item.questionCount} 정답</span><span>{item.correctRate}%</span></div><div className="progress h-2"><span style={{width:`${item.correctRate}%`}}/></div></div><span className="pill">{item.questionCount}문제</span></div>)}{!history.length&&<p className="p-10 text-center text-[#71809d]">완료한 학습이 아직 없어요.</p>}</div></section></>}
+    </div>
+  </main>;
 }
