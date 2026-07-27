@@ -3,11 +3,17 @@ import type {
   LearningSession, LearningTopic, Question, QuestionType, QuestionTypeOption,
   PageData, SessionResult, SpeechAnswer, Statistics, WrongAnswer,
 } from "./types";
+import { demoRequest } from "./demo";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1";
 const ACCESS_KEY = "malhaebom.accessToken";
 const REFRESH_KEY = "malhaebom.refreshToken";
 const GUARDIAN_KEY = "malhaebom.guardian";
+const DEMO_KEY = "malhaebom.demoMode";
+
+export const demoLoginEnabled =
+  process.env.NODE_ENV === "development" ||
+  process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true";
 
 export class ApiError extends Error {
   constructor(message: string, public status = 0, public code = "NETWORK_ERROR") { super(message); }
@@ -18,6 +24,7 @@ function readStorage(key: string) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  if (isDemoMode() && !path.startsWith("/auth/")) return demoRequest<T>(path, init);
   const token = readStorage(ACCESS_KEY);
   const isForm = init.body instanceof FormData;
   const response = await fetch(`${API_BASE}${path}`, {
@@ -62,9 +69,27 @@ export function persistAuth(tokens: AuthTokens) {
   sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
   if (tokens.guardian) sessionStorage.setItem(GUARDIAN_KEY, JSON.stringify(tokens.guardian));
 }
+export function loginAsDemo() {
+  if (!demoLoginEnabled) throw new ApiError("체험용 로그인은 현재 사용할 수 없습니다.", 403, "DEMO_LOGIN_DISABLED");
+  persistAuth({
+    accessToken: "demo-access-token",
+    refreshToken: "demo-refresh-token",
+    expiresInSeconds: 86400,
+    guardian: {
+      guardianId: 0,
+      email: "demo@malhaebom.local",
+      name: "체험 보호자",
+      role: "GUARDIAN",
+    },
+  });
+  sessionStorage.setItem(DEMO_KEY, "true");
+}
+export function isDemoMode() {
+  return readStorage(DEMO_KEY) === "true";
+}
 export function clearAuth() {
   if (typeof window === "undefined") return;
-  [ACCESS_KEY, REFRESH_KEY, GUARDIAN_KEY].forEach(key => sessionStorage.removeItem(key));
+  [ACCESS_KEY, REFRESH_KEY, GUARDIAN_KEY, DEMO_KEY].forEach(key => sessionStorage.removeItem(key));
 }
 export function getGuardian(): Guardian | null {
   const raw = readStorage(GUARDIAN_KEY);
@@ -80,7 +105,7 @@ export const api = {
     const data = await request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(input) });
     persistAuth(data); return data;
   },
-  logout: async () => { await request<null>("/auth/logout", { method: "POST" }); clearAuth(); },
+  logout: async () => { if (!isDemoMode()) await request<null>("/auth/logout", { method: "POST" }); clearAuth(); },
   children: () => request<Child[]>("/children"),
   child: (id: number) => request<Child>(`/children/${id}`),
   createChild: (input: Omit<Child, "childId">) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),

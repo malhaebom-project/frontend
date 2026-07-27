@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Brand, Buddy } from "../components";
-import { api, errorMessage } from "@/lib/api/client";
+import { api, demoLoginEnabled, errorMessage, loginAsDemo } from "@/lib/api/client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,6 +25,11 @@ export default function LoginPage() {
       {error && <ErrorBox>{error}</ErrorBox>}
       <button disabled={loading} className="btn btn-primary btn-large w-full disabled:opacity-60">{loading ? "로그인 중…" : "로그인"}</button>
     </form>
+    {demoLoginEnabled && <>
+      <div className="my-6 flex items-center gap-3 text-xs font-bold text-[#9aa7bb]"><span className="h-px flex-1 bg-[#dce7f7]"/><span>또는</span><span className="h-px flex-1 bg-[#dce7f7]"/></div>
+      <button type="button" onClick={()=>{loginAsDemo();router.replace("/");}} className="btn btn-secondary btn-large w-full">🧪 체험용 로그인</button>
+      <p className="mt-3 text-center text-xs leading-5 text-[#71809d]">백엔드 없이 프로필 선택부터 학습 결과와<br/>보호자 기록까지 전체 화면을 체험할 수 있어요.</p>
+    </>}
     <p className="mt-6 text-center text-sm text-[#71809d]">처음 오셨나요? <Link href="/signup" className="font-extrabold text-[#4f7df3]">회원가입</Link></p>
   </AuthLayout>;
 }
