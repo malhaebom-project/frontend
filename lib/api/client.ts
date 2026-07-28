@@ -98,7 +98,6 @@ export function getGuardian(): Guardian | null {
 export function isAuthenticated() { return Boolean(readStorage(ACCESS_KEY)); }
 
 export const api = {
-  oauthAuthorizeUrl: (provider: string) => `${API_BASE}/auth/oauth/${encodeURIComponent(provider)}/authorize`,
   signup: (input: { email: string; password: string; name: string }) =>
     request<Guardian>("/auth/signup", { method: "POST", body: JSON.stringify(input) }),
   login: async (input: { email: string; password: string }) => {
