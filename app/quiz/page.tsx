@@ -36,9 +36,9 @@ export default function QuizPage() {
   async function processSpeech(audio:Blob){
     if(!question||!session)return;
     try {
-      const speech=await api.uploadSpeech(session.sessionId,question.questionId,audio);
+      const speech=await api.uploadSpeech(session.sessionId,question.sessionQuestionId,audio);
       if(!speech.transcript.trim())throw new ApiError("잘 들리지 않았어요. 천천히 다시 말해볼까요?",422,"SPEECH_NOT_RECOGNIZED");
-      const feedback=await api.submitAnswer(session.sessionId,question.questionId,speech.speechAnswerId,speech.transcript);
+      const feedback=await api.submitAnswer(session.sessionId,question.sessionQuestionId,speech.speechAnswerId,speech.transcript);
       saveSessionValue("feedback",feedback);router.push("/feedback");
     } catch(e){setStatus("error");setMessage(errorMessage(e));}
   }

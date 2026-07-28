@@ -118,18 +118,18 @@ export const api = {
   session: (id: number) => request<LearningSession>(`/learning-sessions/${id}`),
   nextQuestion: (id: number) => request<Question>(`/learning-sessions/${id}/questions/next`),
   completeSession: (id: number) => request<SessionResult>(`/learning-sessions/${id}/complete`, { method: "POST" }),
-  uploadSpeech: (sessionId: number, questionId: number, audio: Blob) => {
+  uploadSpeech: (sessionId: number, sessionQuestionId: number, audio: Blob) => {
     const form = new FormData(); form.append("audio", audio, "answer.webm");
-    return request<SpeechAnswer>(`/learning-sessions/${sessionId}/questions/${questionId}/speech`, { method: "POST", body: form });
+    return request<SpeechAnswer>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/speech`, { method: "POST", body: form });
   },
-  submitAnswer: (sessionId: number, questionId: number, speechAnswerId: number, answerText: string) =>
-    request<AnswerFeedback>(`/learning-sessions/${sessionId}/questions/${questionId}/answers`, { method: "POST", body: JSON.stringify({ speechAnswerId, answerText }) }),
+  submitAnswer: (sessionId: number, sessionQuestionId: number, speechAnswerId: number, answerText: string) =>
+    request<AnswerFeedback>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/answers`, { method: "POST", body: JSON.stringify({ speechAnswerId, answerText }) }),
   hint: (sessionId: number, questionId: number) =>
     request<{ hintText: string; hintTtsUrl: string | null }>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
   explanation: (sessionId: number, questionId: number, answerId: number) =>
     request<{ explanationText: string; explanationTtsUrl: string | null }>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
-  followUp: (sessionId: number, questionId: number, answerId: number) =>
-    request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${questionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
+  followUp: (sessionId: number, sessionQuestionId: number, answerId: number) =>
+    request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
   questionTts: (questionId: number) => request<{ questionId: number; text: string; audioUrl: string }>(`/questions/${questionId}/tts`),
   history: (childId: number, query = "") => request<LearningHistory>(`/children/${childId}/learning-history${query}`),
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),

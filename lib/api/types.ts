@@ -30,18 +30,18 @@ export interface LearningSession {
   status: SessionStatus; startedAt: string;
 }
 export interface Question {
-  questionId: number; questionIndex: number; totalQuestionCount: number; type: QuestionType;
+  questionId: number; sessionQuestionId: number; questionIndex: number; totalQuestionCount: number; type: QuestionType;
   questionText: string; questionTextKo: string; imageUrl: string | null; hintText: string | null; ttsUrl: string | null;
 }
 export interface SpeechAnswer { speechAnswerId: number; transcript: string; confidence: number; audioUrl: string | null }
 export interface AnswerFeedback {
-  answerId: number; questionId: number; answerText: string; result: AnswerResult; score: number;
+  answerId: number; sessionQuestionId: number; answerText: string; result: AnswerResult; score: number;
   matchedKeywords: string[]; missingKeywords: string[]; modelAnswer: string;
-  feedbackText: string; feedbackTtsUrl: string | null; canRetry: boolean;
+  feedbackText: string; feedbackTtsUrl: string | null; canRetry: boolean; remainingAttempts?: number;
 }
 export interface SessionResult {
   sessionId: number; questionCount: number; correctCount: number; correctRate: number;
-  earnedStars: number; studySeconds: number; completedAt: string;
+  studySeconds: number; completedAt: string;
 }
 export interface LearningHistory {
   content: HistoryItem[]; page: number; size: number; totalElements: number; totalPages: number;

@@ -12,7 +12,7 @@ export default function ResultsPage() {
   const router=useRouter(); const hydrated=useHydrated(); const result:SessionResult|null=hydrated?learningState.result():null;
   useEffect(()=>{if(hydrated&&!result)router.replace("/profiles");},[router,hydrated,result]);
   if(!result)return null;
-  const stats=[{icon:"✓",value:`${result.correctCount} / ${result.questionCount}`,label:"정답 수",tone:"soft-mint",color:"#2b9e75"},{icon:"↗",value:`${result.correctRate}%`,label:"정답률",tone:"soft-blue",color:"#4f7df3"},{icon:"★",value:`${result.earnedStars}개`,label:"획득한 별",tone:"soft-yellow",color:"#a57900"}];
+  const stats=[{icon:"✓",value:`${result.correctCount} / ${result.questionCount}`,label:"정답 수",tone:"soft-mint",color:"#2b9e75"},{icon:"↗",value:`${result.correctRate}%`,label:"정답률",tone:"soft-blue",color:"#4f7df3"},{icon:"★",value:`${result.correctCount}개`,label:"획득한 별",tone:"soft-yellow",color:"#a57900"}];
   return <main className="page-shell"><div className="container"><header className="topbar"><Brand/><span className="pill">학습 시간 {Math.max(1,Math.round(result.studySeconds/60))}분</span></header><section className="mx-auto max-w-4xl pb-16 pt-7 text-center">
     <Buddy className="float mx-auto"/><p className="eyebrow mt-1">Mission complete!</p><h1 className="title mt-3">오늘 학습을 완료했어요!</h1><p className="subtitle mt-3">끝까지 집중한 모습이 정말 멋져요.</p>
     <div className="mt-9 grid gap-4 sm:grid-cols-3">{stats.map(stat=><div key={stat.label} className="card flex items-center gap-4 p-6 text-left"><span className={`stat-icon ${stat.tone}`} style={{color:stat.color}}>{stat.icon}</span><div><strong className="block text-3xl">{stat.value}</strong><span className="text-sm font-bold text-[#71809d]">{stat.label}</span></div></div>)}</div>

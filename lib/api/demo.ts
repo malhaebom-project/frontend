@@ -17,11 +17,11 @@ interface DemoState {
 }
 
 const questions: Question[] = [
-  { questionId:501,questionIndex:1,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"What is this?",questionTextKo:"이것은 무엇일까요?",imageUrl:null,hintText:"It is an ____.",ttsUrl:null },
-  { questionId:502,questionIndex:2,totalQuestionCount:5,type:"SHORT_ANSWER",questionText:"What color is the apple?",questionTextKo:"사과는 무슨 색일까요?",imageUrl:null,hintText:"It is ____.",ttsUrl:null },
-  { questionId:503,questionIndex:3,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"What fruit do you like?",questionTextKo:"어떤 과일을 좋아하나요?",imageUrl:null,hintText:"I like ____.",ttsUrl:null },
-  { questionId:504,questionIndex:4,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"Is the apple delicious?",questionTextKo:"사과가 맛있어 보이나요?",imageUrl:null,hintText:"Yes, it is ____.",ttsUrl:null },
-  { questionId:505,questionIndex:5,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"When do you eat apples?",questionTextKo:"언제 사과를 먹나요?",imageUrl:null,hintText:"I eat apples at ____.",ttsUrl:null },
+  { sessionQuestionId:1501,questionId:501,questionIndex:1,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"What is this?",questionTextKo:"이것은 무엇일까요?",imageUrl:null,hintText:"It is an ____.",ttsUrl:null },
+  { sessionQuestionId:1502,questionId:502,questionIndex:2,totalQuestionCount:5,type:"SHORT_ANSWER",questionText:"What color is the apple?",questionTextKo:"사과는 무슨 색일까요?",imageUrl:null,hintText:"It is ____.",ttsUrl:null },
+  { sessionQuestionId:1503,questionId:503,questionIndex:3,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"What fruit do you like?",questionTextKo:"어떤 과일을 좋아하나요?",imageUrl:null,hintText:"I like ____.",ttsUrl:null },
+  { sessionQuestionId:1504,questionId:504,questionIndex:4,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"Is the apple delicious?",questionTextKo:"사과가 맛있어 보이나요?",imageUrl:null,hintText:"Yes, it is ____.",ttsUrl:null },
+  { sessionQuestionId:1505,questionId:505,questionIndex:5,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"When do you eat apples?",questionTextKo:"언제 사과를 먹나요?",imageUrl:null,hintText:"I eat apples at ____.",ttsUrl:null },
 ];
 
 const defaultState: DemoState = {
@@ -76,7 +76,7 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   const completeMatch=path.match(/^\/learning-sessions\/(\d+)\/complete$/);
   if(completeMatch){
     const count=state.session?.questionCount??5;
-    const result:SessionResult={sessionId:100,questionCount:count,correctCount:state.correctCount,correctRate:Math.round(state.correctCount/count*100),earnedStars:state.correctCount,studySeconds:286,completedAt:new Date().toISOString()};
+    const result:SessionResult={sessionId:100,questionCount:count,correctCount:state.correctCount,correctRate:Math.round(state.correctCount/count*100),studySeconds:286,completedAt:new Date().toISOString()};
     if(state.session)state.session.status="COMPLETED";writeState(state);return result as T;
   }
 
@@ -88,12 +88,12 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   if(answerMatch&&method==="POST"){
     const input=jsonBody(init);const index=state.currentQuestion;const isRetryExample=index===1&&!state.retrying;
     const feedback:AnswerFeedback={
-      answerId:2001+index,questionId:Number(answerMatch[1]),answerText:input.answerText,
+      answerId:2001+index,sessionQuestionId:Number(answerMatch[1]),answerText:input.answerText,
       result:isRetryExample?"PARTIALLY_CORRECT":"CORRECT",score:isRetryExample?78:96,
       matchedKeywords:isRetryExample?["red"]:["apple"],missingKeywords:isRetryExample?["a"]:[],
       modelAnswer:isRetryExample?"It is a red apple.":input.answerText,
       feedbackText:isRetryExample?"아주 좋아요! 'a red apple'이라고 말하면 더 자연스러워요.":"정확하고 또박또박 잘 말했어요!",
-      feedbackTtsUrl:null,canRetry:isRetryExample,
+      feedbackTtsUrl:null,canRetry:isRetryExample,remainingAttempts:isRetryExample?1:undefined,
     };
     state.answers.push(feedback);if(!isRetryExample)state.correctCount+=1;state.currentQuestion+=1;state.retrying=false;
     if(state.session)state.session.currentQuestionIndex=state.currentQuestion;writeState(state);return feedback as T;
