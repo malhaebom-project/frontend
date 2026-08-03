@@ -9,13 +9,15 @@ import { learningState, saveSessionValue } from "@/lib/api/session";
 import type { AnswerFeedback } from "@/lib/api/types";
 import { useHydrated } from "@/lib/use-hydrated";
 import { playCharacterSpeech, stopCharacterSpeech } from "@/lib/character-speech";
+import { StarReward } from "../star-reward";
 
 export default function FeedbackPage() {
   const router=useRouter(); const hydrated=useHydrated(); const feedback:AnswerFeedback|null=hydrated?learningState.feedback():null; const [loading,setLoading]=useState(false); const [error,setError]=useState("");
+  const question=hydrated?learningState.question():null; const session=hydrated?learningState.session():null; const [starTotal,setStarTotal]=useState(0);
   useEffect(()=>{if(hydrated&&!feedback)router.replace("/quiz");},[router,hydrated,feedback]);
   useEffect(()=>()=>stopCharacterSpeech(),[]);
   if(!feedback)return null;
-  const correct=feedback.result==="CORRECT"; const question=learningState.question(); const session=learningState.session(); const isLast=question&&question.questionIndex>=question.totalQuestionCount;
+  const correct=feedback.result==="CORRECT"; const isLast=question&&question.questionIndex>=question.totalQuestionCount;
   async function next(){
     if(!session)return;stopCharacterSpeech();setLoading(true);setError("");
     try {if(isLast){const result=await api.completeSession(session.sessionId);saveSessionValue("result",result);router.push("/results");}else router.push("/quiz");}
@@ -25,7 +27,7 @@ export default function FeedbackPage() {
   const feedbackText=feedback.feedbackText;
   function replay(){playCharacterSpeech({url:feedbackTtsUrl,text:feedbackText,lang:"ko-KR"}).catch(()=>setError("피드백 음성을 재생하지 못했어요."));}
   function retry(){stopCharacterSpeech();if(isDemoMode())prepareDemoRetry();router.push("/quiz");}
-  return <main className="page-shell"><div className="container"><header className="topbar"><Brand/><span className={`pill ${correct?"bg-[#e4f8f0] text-[#2b9e75]":"bg-[#eaf3ff] text-[#3f68d9]"}`}>{correct?"정답!":"한 번 더 도전!"}</span></header>
+  return <main className="page-shell">{correct&&question&&session&&<StarReward answerId={feedback.answerId} sessionId={session.sessionId} sessionStartedAt={session.startedAt} questionIndex={question.questionIndex} totalQuestions={question.totalQuestionCount} onTotalChange={setStarTotal}/>}<div className="container"><header className="topbar"><Brand/><span className={`pill ${correct?"bg-[#fff6d7] text-[#9d7600]":"bg-[#eaf3ff] text-[#3f68d9]"}`}>{correct?`★ ${starTotal}개`:"한 번 더 도전!"}</span></header>
     <section className="mx-auto grid max-w-5xl items-center gap-8 py-10 lg:grid-cols-[.7fr_1.3fr]"><div className="relative text-center"><Buddy className="float mx-auto"/><div className="mt-3"><span className={`rounded-full px-5 py-2 font-black ${correct?"bg-[#e4f8f0] text-[#2b9e75]":"bg-[#fff6d7] text-[#9d7600]"}`}>정확도 {feedback.score}%</span></div></div>
       <div><p className="eyebrow">{correct?"Amazing work!":"Keep going!"}</p><h1 className="display mt-2">{correct?"Great job! 🎉":"좋은 시도예요!"}</h1><p className="subtitle mt-3">{feedback.feedbackText}</p>
         {error&&<div className="mt-4 rounded-2xl bg-[#fff6d7] p-4 font-bold text-[#7f640d]">{error}</div>}
