@@ -88,12 +88,12 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   if(answerMatch&&method==="POST"){
     const input=jsonBody(init);const index=state.currentQuestion;const isRetryExample=index===1&&!state.retrying;
     const feedback:AnswerFeedback={
-      answerId:2001+index,sessionQuestionId:Number(answerMatch[1]),answerText:input.answerText,
+      answerId:2001+state.answers.length,sessionQuestionId:Number(answerMatch[1]),answerText:input.answerText,
+      attemptNo:state.retrying?2:1,
       result:isRetryExample?"PARTIALLY_CORRECT":"CORRECT",score:isRetryExample?78:96,
-      matchedKeywords:isRetryExample?["red"]:["apple"],missingKeywords:isRetryExample?["a"]:[],
       modelAnswer:isRetryExample?"It is a red apple.":input.answerText,
       feedbackText:isRetryExample?"아주 좋아요! 'a red apple'이라고 말하면 더 자연스러워요.":"정확하고 또박또박 잘 말했어요!",
-      feedbackTtsUrl:null,canRetry:isRetryExample,remainingAttempts:isRetryExample?1:undefined,
+      feedbackTtsUrl:null,canRetry:isRetryExample,remainingAttempts:isRetryExample?1:0,
     };
     state.answers.push(feedback);if(!isRetryExample)state.correctCount+=1;state.currentQuestion+=1;state.retrying=false;
     if(state.session)state.session.currentQuestionIndex=state.currentQuestion;writeState(state);return feedback as T;
