@@ -53,6 +53,14 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   }
   const childMatch=path.match(/^\/children\/(\d+)$/);
   if(childMatch&&method==="GET")return (state.children.find(v=>v.childId===Number(childMatch[1]))??state.children[0]) as T;
+  if(childMatch&&method==="DELETE"){
+    const childId=Number(childMatch[1]);
+    state.children=state.children.filter(child=>child.childId!==childId);
+    if(state.session?.childId===childId){
+      state.session=null;state.currentQuestion=0;state.correctCount=0;state.answers=[];state.retrying=false;
+    }
+    writeState(state);return null as T;
+  }
 
   if(path==="/learning-topics")return [
     {topicId:1,name:"동물",code:"ANIMAL"},{topicId:2,name:"음식",code:"FOOD"},{topicId:3,name:"일상생활",code:"DAILY_LIFE"},

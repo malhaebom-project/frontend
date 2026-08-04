@@ -11,6 +11,9 @@ const keys = {
 export function saveSessionValue<T>(key: keyof typeof keys, value: T) {
   sessionStorage.setItem(keys[key], JSON.stringify(value));
 }
+export function removeSessionValue(key: keyof typeof keys) {
+  sessionStorage.removeItem(keys[key]);
+}
 export function readSessionValue<T>(key: keyof typeof keys): T | null {
   if (typeof window === "undefined") return null;
   const raw = sessionStorage.getItem(keys[key]);
