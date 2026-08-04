@@ -1,0 +1,116 @@
+{
+  "canvas": {
+    "width": 360,
+    "height": 420
+  },
+  "layers": {
+    "back-hair": {
+      "file": "back-hair.png",
+      "placement": {
+        "x": 20,
+        "y": 37,
+        "width": 320,
+        "height": 346
+      }
+    },
+    "face-blank": {
+      "file": "face-blank.png",
+      "placement": {
+        "x": 30,
+        "y": 20,
+        "width": 300,
+        "height": 380
+      }
+    },
+    "front-hair": {
+      "file": "front-hair.png",
+      "placement": {
+        "x": 20,
+        "y": 45,
+        "width": 320,
+        "height": 329
+      }
+    },
+    "torso-cardigan": {
+      "file": "torso-cardigan.png",
+      "placement": {
+        "x": 20,
+        "y": 89,
+        "width": 320,
+        "height": 241
+      }
+    },
+    "arm-left": {
+      "file": "arm-left.png",
+      "placement": {
+        "x": 20,
+        "y": 20,
+        "width": 320,
+        "height": 379
+      }
+    },
+    "arm-right": {
+      "file": "arm-right.png",
+      "placement": {
+        "x": 20,
+        "y": 22,
+        "width": 320,
+        "height": 376
+      }
+    },
+    "eyes-brows-nose": {
+      "file": "eyes-brows-nose.png",
+      "placement": {
+        "x": 20,
+        "y": 119,
+        "width": 320,
+        "height": 182
+      }
+    },
+    "desk-props": {
+      "file": "desk-props.png",
+      "placement": {
+        "x": 10,
+        "y": 91,
+        "width": 340,
+        "height": 238
+      }
+    },
+    "mouth-rest": {
+      "file": "mouth-rest.png",
+      "placement": {
+        "x": 105,
+        "y": 187,
+        "width": 150,
+        "height": 46
+      }
+    },
+    "mouth-a": {
+      "file": "mouth-a.png",
+      "placement": {
+        "x": 117,
+        "y": 167,
+        "width": 125,
+        "height": 86
+      }
+    },
+    "mouth-o": {
+      "file": "mouth-o.png",
+      "placement": {
+        "x": 150,
+        "y": 173,
+        "width": 60,
+        "height": 73
+      }
+    },
+    "mouth-smile": {
+      "file": "mouth-smile.png",
+      "placement": {
+        "x": 109,
+        "y": 178,
+        "width": 141,
+        "height": 64
+      }
+    }
+  }
+}

@@ -1,0 +1,83 @@
+/* Scoped to Teacher2D only. The character intentionally animates only its
+   eyelids and mouth paths. */
+
+.root {
+  --teacher-skin-at-eyes: #fdcda4;
+  --teacher-eye-line: #3d281d;
+  --teacher-lip-line: #98514d;
+  /* Warm brown-red sampled from the character's original speaking artwork.
+     Avoids the previous gray-purple cast inside the mouth. */
+  --teacher-mouth-cavity: #6b2b26;
+  --teacher-inner-lip-edge: #b85f59;
+  --teacher-teeth: #fffaf2;
+
+  display: inline-block;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mouthPatch,
+.mouthRig {
+  pointer-events: none;
+}
+
+.mouthOuter {
+  stroke: var(--teacher-lip-line);
+  stroke-linejoin: round;
+  stroke-width: 0.72;
+}
+
+.mouthInner {
+  fill: var(--teacher-mouth-cavity);
+  stroke: var(--teacher-inner-lip-edge);
+  stroke-linejoin: round;
+  stroke-width: 0.72;
+}
+
+.teeth {
+  fill: var(--teacher-teeth);
+  transition: opacity 55ms linear;
+}
+
+.tongue {
+  transition: opacity 55ms linear;
+}
+
+.lowerLipHighlight {
+  fill: none;
+  stroke: rgba(255, 215, 205, 0.78);
+  stroke-linecap: round;
+  stroke-width: 0.9;
+}
+
+.blinkOverlay {
+  pointer-events: none;
+  transition: opacity 45ms ease-out;
+  will-change: opacity;
+}
+
+.eyeMask {
+  fill: var(--teacher-skin-at-eyes);
+}
+
+.closedEye {
+  fill: none;
+  stroke: var(--teacher-eye-line);
+  stroke-linecap: round;
+  stroke-width: 7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teeth,
+  .tongue,
+  .blinkOverlay {
+    transition: none;
+  }
+}

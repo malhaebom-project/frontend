@@ -9,9 +9,12 @@ export type QuestionType = "SHORT_ANSWER" | "PICTURE_DESCRIPTION" | "OPEN_SPEAKI
 export type SessionStatus = "IN_PROGRESS" | "COMPLETED" | "CANCELED";
 export type AnswerResult = "CORRECT" | "PARTIALLY_CORRECT" | "INCORRECT" | "UNRECOGNIZED";
 
+export interface VisemeCue {
+  offsetMs: number;
+  visemeId: number;
+}
+
 export interface Guardian { guardianId: number; email: string; name: string; role: Role }
-export interface SignupInput { email: string; password: string; name: string }
-export interface LoginInput { email: string; password: string }
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -24,16 +27,8 @@ export interface Child {
   childId: number; nickname: string; age: number; grade: number; level: ChildLevel;
   totalStudyCount?: number; totalCorrectRate?: number;
 }
-export interface CreateChildInput {
-  nickname: string; age: number; grade: number; level: ChildLevel;
-}
-export type UpdateChildInput = Partial<CreateChildInput>;
 export interface LearningTopic { topicId: number; name: string; code: string }
 export interface QuestionTypeOption { code: QuestionType; name: string }
-export interface CreateLearningSessionInput {
-  childId: number; topicId: number; difficulty: Difficulty;
-  questionTypes: QuestionType[]; questionCount: number;
-}
 export interface LearningSession {
   sessionId: number; childId?: number; topicId?: number; difficulty?: Difficulty;
   questionCount: number; currentQuestionIndex: number; correctCount?: number;
@@ -42,13 +37,14 @@ export interface LearningSession {
 export interface Question {
   questionId: number; sessionQuestionId: number; questionIndex: number; totalQuestionCount: number; type: QuestionType;
   questionText: string; questionTextKo: string; imageUrl: string | null; hintText: string | null; ttsUrl: string | null;
+  ttsVisemes?: VisemeCue[];
 }
 export interface SpeechAnswer { speechAnswerId: number; transcript: string; confidence: number; audioUrl: string | null }
 export interface AnswerFeedback {
-  answerId: number; sessionQuestionId: number; answerText: string; attemptNo: number;
-  result: AnswerResult; score: number; modelAnswer: string;
+  answerId: number; sessionQuestionId: number; answerText: string; attemptNo: number; result: AnswerResult; score: number;
+  matchedKeywords?: string[]; missingKeywords?: string[]; modelAnswer: string;
   feedbackText: string; feedbackTtsUrl: string | null; canRetry: boolean; remainingAttempts: number;
-  matchedKeywords?: string[]; missingKeywords?: string[];
+  feedbackTtsVisemes?: VisemeCue[];
 }
 export interface SessionResult {
   sessionId: number; questionCount: number; correctCount: number; correctRate: number;
@@ -56,9 +52,6 @@ export interface SessionResult {
 }
 export interface LearningHistory {
   content: HistoryItem[]; page: number; size: number; totalElements: number; totalPages: number;
-}
-export interface LearningHistoryQuery {
-  page?: number; size?: number; startDate?: string; endDate?: string;
 }
 export interface HistoryItem {
   sessionId: number; topicName: string; difficulty: Difficulty; questionCount: number;
@@ -75,20 +68,14 @@ export interface WrongAnswer {
 export interface FollowUpQuestion {
   followUpQuestionId: number; questionText: string; questionTextKo: string;
   ttsUrl: string | null; followUpsRemaining: number;
+  ttsVisemes?: VisemeCue[];
 }
-export interface HintResponse { hintText: string; hintTtsUrl: string | null }
-export interface ExplanationResponse { explanationText: string; explanationTtsUrl: string | null }
-export interface QuestionTts { questionId: number; text: string; audioUrl: string }
 export interface AdminQuestionInput {
   topicId: number; type: QuestionType; difficulty: Difficulty; gradeMin: number; gradeMax: number;
   questionText: string; questionTextKo: string; imageUrl: string | null; modelAnswer: string;
   acceptedAnswers: string[]; requiredKeywords: string[]; hintText: string | null; enabled: boolean;
 }
 export interface AdminQuestion extends AdminQuestionInput { questionId: number }
-export interface AdminQuestionQuery {
-  topicId?: number; type?: QuestionType; difficulty?: Difficulty; enabled?: boolean;
-  page?: number; size?: number;
-}
 export interface PageData<T> {
   content: T[]; page: number; size: number; totalElements: number; totalPages: number;
 }

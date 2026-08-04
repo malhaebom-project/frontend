@@ -23,6 +23,17 @@
 # misc
 .DS_Store
 *.pem
+.Rhistory
+.RData
+.Ruserdata
+
+# generated analysis artifacts
+/analysis/data/raw/*
+/analysis/data/processed/*
+/analysis/output/*
+!/analysis/data/raw/.gitkeep
+!/analysis/data/processed/.gitkeep
+!/analysis/output/.gitkeep
 
 # debug
 npm-debug.log*

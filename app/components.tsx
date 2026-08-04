@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AuthButton, CurrentProfileBadge } from "./auth-button";
-import { CharacterMouth } from "./character-mouth";
+import { TeacherBuddy } from "@/components/character/TeacherBuddy";
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -11,17 +11,21 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function Buddy({ className = "" }: { className?: string }) {
+export type BuddyMotion = "idle" | "welcome" | "listening" | "speaking" | "thinking" | "correct" | "feedback";
+
+export function Buddy({
+  className = "",
+  motion = "idle",
+}: {
+  className?: string;
+  motion?: BuddyMotion;
+}) {
   return (
-    <div className={`buddy ${className}`} role="img" aria-label="말해봄 AI 친구 봄이">
-      <div className="buddy-body">
-        <div className="buddy-face">
-          <span className="buddy-eyes" />
-          <span className="buddy-cheek" />
-          <CharacterMouth />
-        </div>
-      </div>
-      <span className="buddy-star" aria-hidden="true">★</span>
+    <div
+      className={`buddy buddy-teacher-character ${className}`}
+      data-motion={motion}
+    >
+      <TeacherBuddy motion={motion} />
     </div>
   );
 }

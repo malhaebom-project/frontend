@@ -18,7 +18,7 @@ export default function SignupPage() {
       await api.login({email,password}); router.replace("/profiles");
     } catch(e) { setError(errorMessage(e)); } finally { setLoading(false); }
   }
-  return <AuthLayout title="말해봄을 시작해요" subtitle="아이의 학습 기록을 관리할 보호자 계정을 만들어 주세요.">
+  return <AuthLayout title="말해봄을 시작해요" subtitle="아이의 학습 기록을 관리할 보호자 계정을 만들어 주세요." characterMotion="welcome">
     <form onSubmit={submit} className="mt-7 space-y-4">
       <Field label="보호자 이름" name="name" placeholder="홍길동"/>
       <Field label="이메일" name="email" type="email" placeholder="parent@example.com"/>

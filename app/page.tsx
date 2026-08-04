@@ -1,39 +1,54 @@
 import Link from "next/link";
 import { Buddy, Topbar } from "./components";
+import { HomeGreetingBubble } from "./home-greeting-bubble";
 
 export default function HomePage() {
   return (
-    <main className="page-shell grid-dots">
+    <main className="page-shell">
       <div className="container">
         <Topbar />
-        <section className="grid min-h-[calc(100svh-88px)] items-center gap-10 pb-20 lg:grid-cols-[1.05fr_.95fr]">
+        <section className="home-hero grid items-center gap-12 pb-16 lg:grid-cols-[1.02fr_.98fr]">
           <div className="relative z-10">
-            <span className="pill mb-7 text-[#3f68d9]">✦ 매일 10분, 즐거운 영어 습관</span>
-            <h1 className="display">AI 친구와<br/><span className="text-[#4f7df3]">영어로 말해봐요!</span></h1>
-            <p className="subtitle mt-6 max-w-xl">듣고, 말하고, 칭찬받으며 영어 자신감이 쑥쑥.<br className="hidden sm:block"/> 봄이가 아이의 첫 영어 대화를 함께해요.</p>
+            <span className="pill home-kicker mb-7">★ 매일 10분, 영어 자신감 한 칸</span>
+            <h1 className="display">말할수록 자라는<br/><span className="home-accent">나의 영어 자신감</span></h1>
+            <p className="subtitle mt-6 max-w-xl">봄이의 질문을 듣고 영어로 대답해 보세요.<br className="hidden sm:block"/> 아이의 속도에 맞춘 칭찬과 피드백이 매일 이어져요.</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/profiles" className="btn btn-primary btn-large">학습 시작하기 <span aria-hidden>→</span></Link>
-              <Link href="/records" className="btn btn-secondary btn-large">보호자 메뉴</Link>
+              <Link href="/profiles" className="btn btn-primary btn-large">무료로 학습 시작하기</Link>
+              <Link href="/records" className="btn btn-secondary btn-large">학습 기록 보기</Link>
             </div>
-            <div className="mt-9 flex flex-wrap gap-5 text-sm font-bold text-[#71809d]">
-              <span>✓ 아이 맞춤 질문</span><span>✓ 따뜻한 AI 피드백</span><span>✓ 학습 기록 제공</span>
+            <div className="home-proof">
+              <span>✓ 아이 맞춤 문제</span><span>✓ 따뜻한 AI 피드백</span><span>✓ 성장 기록</span>
             </div>
           </div>
-          <div className="relative mx-auto grid min-h-[520px] w-full max-w-[540px] place-items-center">
-            <div className="absolute inset-12 rounded-[56px] bg-white/80 shadow-[0_30px_80px_rgba(56,88,145,.14)] rotate-3" />
-            <div className="absolute left-5 top-20 rounded-2xl bg-white p-4 text-2xl shadow-xl -rotate-6" aria-hidden>ABC</div>
-            <div className="absolute right-2 top-8 rounded-full bg-[#fff6d7] p-5 text-3xl shadow-lg" aria-hidden>☀</div>
-            <div className="absolute bottom-16 left-2 rounded-full bg-[#e4f8f0] p-4 text-3xl shadow-lg" aria-hidden>♪</div>
-            <div className="relative text-center">
-              <Buddy className="float scale-125" />
-              <div className="speech mt-8 min-w-[300px]">
-                <p className="mb-1 text-sm font-extrabold text-[#4f7df3]">Hi, 서아!</p>
-                <p className="m-0 text-2xl font-black">Ready to speak?</p>
-              </div>
+          <div className="hero-stage mx-auto grid w-full max-w-[560px] place-items-center">
+            <div className="hero-card" aria-hidden />
+            <div className="hero-sticker hero-sticker-one" aria-hidden>ABC</div>
+            <div className="hero-sticker hero-sticker-two" aria-hidden>★ +1</div>
+            <div className="hero-sticker hero-sticker-three" aria-hidden>🔊</div>
+            <div className="hero-character">
+              <Buddy className="float" />
+              <HomeGreetingBubble />
             </div>
           </div>
         </section>
       </div>
+      <section className="home-section">
+        <div className="container">
+          <div className="home-section-title">
+            <p className="eyebrow">How it works</p>
+            <h2 className="title mt-3">듣고, 말하고, 바로 성장해요</h2>
+            <p className="subtitle mt-4">복잡한 공부 대신 짧고 즐거운 말하기 루틴을 만들어요.</p>
+          </div>
+          <div className="home-steps">
+            <article className="card home-step"><span className="home-step-number">1</span><h3>봄이의 질문 듣기</h3><p>아이의 학년과 수준에 맞는 문제를 또렷한 음성으로 들어요.</p></article>
+            <article className="card home-step"><span className="home-step-number">2</span><h3>버튼 누르고 말하기</h3><p>틀릴 걱정 없이 마이크를 누르고 영어로 편하게 대답해요.</p></article>
+            <article className="card home-step"><span className="home-step-number">3</span><h3>칭찬과 별 받기</h3><p>바로 도착한 친절한 피드백을 듣고 작은 성취를 쌓아요.</p></article>
+          </div>
+          <div className="mt-8 text-center">
+            <Link href="/character-lab" className="pill">🧪 실험: 2D 영어 선생님 캐릭터 미리보기</Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

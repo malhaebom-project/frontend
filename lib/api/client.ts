@@ -1,9 +1,7 @@
 import type {
-  AdminQuestion, AdminQuestionInput, AdminQuestionQuery, AnswerFeedback, AuthTokens, Child, CreateChildInput,
-  CreateLearningSessionInput, ExplanationResponse, FollowUpQuestion, Guardian, HintResponse,
-  LearningHistory, LearningHistoryQuery, LearningSession, LearningTopic, LoginInput,
-  PageData, Question, QuestionTts, QuestionTypeOption, SessionResult, SignupInput,
-  SpeechAnswer, Statistics, UpdateChildInput, WrongAnswer,
+  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, Difficulty, FollowUpQuestion, Guardian, LearningHistory,
+  LearningSession, LearningTopic, Question, QuestionType, QuestionTypeOption,
+  PageData, SessionResult, SpeechAnswer, Statistics, VisemeCue, WrongAnswer,
 } from "./types";
 import { demoRequest } from "./demo";
 
@@ -99,34 +97,24 @@ export function getGuardian(): Guardian | null {
 }
 export function isAuthenticated() { return Boolean(readStorage(ACCESS_KEY)); }
 
-function withQuery(path: string, query: object) {
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value !== undefined) params.set(key, String(value));
-  });
-  const search = params.toString();
-  return search ? `${path}?${search}` : path;
-}
-
 export const api = {
-  signup: (input: SignupInput) =>
+  oauthAuthorizeUrl: (provider: string) => `${API_BASE}/auth/oauth/${encodeURIComponent(provider)}/authorize`,
+  signup: (input: { email: string; password: string; name: string }) =>
     request<Guardian>("/auth/signup", { method: "POST", body: JSON.stringify(input) }),
-  login: async (input: LoginInput) => {
+  login: async (input: { email: string; password: string }) => {
     const data = await request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(input) });
     persistAuth(data); return data;
   },
-  oauthAuthorizeUrl: (provider: string) =>
-    `${API_BASE}/auth/oauth/${encodeURIComponent(provider)}/authorize`,
   logout: async () => { if (!isDemoMode()) await request<null>("/auth/logout", { method: "POST" }); clearAuth(); },
   children: () => request<Child[]>("/children"),
   child: (id: number) => request<Child>(`/children/${id}`),
-  createChild: (input: CreateChildInput) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
-  updateChild: (id: number, input: UpdateChildInput) =>
+  createChild: (input: Omit<Child, "childId">) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
+  updateChild: (id: number, input: Partial<Pick<Child, "nickname" | "age" | "grade" | "level">>) =>
     request<Child>(`/children/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteChild: (id: number) => request<null>(`/children/${id}`, { method: "DELETE" }),
   topics: () => request<LearningTopic[]>("/learning-topics"),
   questionTypes: () => request<QuestionTypeOption[]>("/question-types"),
-  createSession: (input: CreateLearningSessionInput) =>
+  createSession: (input: { childId: number; topicId: number; difficulty: Difficulty; questionTypes: QuestionType[]; questionCount: number }) =>
     request<LearningSession>("/learning-sessions", { method: "POST", body: JSON.stringify(input) }),
   session: (id: number) => request<LearningSession>(`/learning-sessions/${id}`),
   nextQuestion: (id: number) => request<Question>(`/learning-sessions/${id}/questions/next`),
@@ -137,19 +125,19 @@ export const api = {
   },
   submitAnswer: (sessionId: number, sessionQuestionId: number, speechAnswerId: number, answerText: string) =>
     request<AnswerFeedback>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/answers`, { method: "POST", body: JSON.stringify({ speechAnswerId, answerText }) }),
+  skipRetry: (sessionId: number, sessionQuestionId: number) =>
+    request<null>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/skip-retry`, { method: "POST" }),
   hint: (sessionId: number, questionId: number) =>
-    request<HintResponse>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
+    request<{ hintText: string; hintTtsUrl: string | null; hintTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
   explanation: (sessionId: number, questionId: number, answerId: number) =>
-    request<ExplanationResponse>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
+    request<{ explanationText: string; explanationTtsUrl: string | null; explanationTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
   followUp: (sessionId: number, sessionQuestionId: number, answerId: number) =>
     request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
-  questionTts: (questionId: number) => request<QuestionTts>(`/questions/${questionId}/tts`),
-  history: (childId: number, query: LearningHistoryQuery = {}) =>
-    request<LearningHistory>(withQuery(`/children/${childId}/learning-history`, query)),
+  questionTts: (questionId: number) => request<{ questionId: number; text: string; audioUrl: string }>(`/questions/${questionId}/tts`),
+  history: (childId: number, query = "") => request<LearningHistory>(`/children/${childId}/learning-history${query}`),
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),
   wrongAnswers: (childId: number) => request<WrongAnswer[]>(`/children/${childId}/wrong-answers`),
-  adminQuestions: (query: AdminQuestionQuery = {}) =>
-    request<PageData<AdminQuestion>>(withQuery("/admin/questions", query)),
+  adminQuestions: (query = "") => request<PageData<AdminQuestion>>(`/admin/questions${query}`),
   adminQuestion: (id: number) => request<AdminQuestion>(`/admin/questions/${id}`),
   createAdminQuestion: (input: AdminQuestionInput) =>
     request<{ questionId: number }>("/admin/questions", { method: "POST", body: JSON.stringify(input) }),
