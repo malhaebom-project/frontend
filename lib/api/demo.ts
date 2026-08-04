@@ -17,11 +17,11 @@ interface DemoState {
 }
 
 const questions: Question[] = [
-  { sessionQuestionId:1501,questionId:501,questionIndex:1,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"What is this?",questionTextKo:"이것은 무엇일까요?",imageUrl:null,hintText:"It is an ____.",ttsUrl:null },
-  { sessionQuestionId:1502,questionId:502,questionIndex:2,totalQuestionCount:5,type:"SHORT_ANSWER",questionText:"What color is the apple?",questionTextKo:"사과는 무슨 색일까요?",imageUrl:null,hintText:"It is ____.",ttsUrl:null },
-  { sessionQuestionId:1503,questionId:503,questionIndex:3,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"What fruit do you like?",questionTextKo:"어떤 과일을 좋아하나요?",imageUrl:null,hintText:"I like ____.",ttsUrl:null },
-  { sessionQuestionId:1504,questionId:504,questionIndex:4,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"Is the apple delicious?",questionTextKo:"사과가 맛있어 보이나요?",imageUrl:null,hintText:"Yes, it is ____.",ttsUrl:null },
-  { sessionQuestionId:1505,questionId:505,questionIndex:5,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"When do you eat apples?",questionTextKo:"언제 사과를 먹나요?",imageUrl:null,hintText:"I eat apples at ____.",ttsUrl:null },
+  { sessionQuestionId:1501,questionId:501,questionIndex:1,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"What is this?",questionTextKo:"이것은 무엇일까요?",imageUrl:"/demo/questions/apple-object.webp",hintText:"It is an ____.",ttsUrl:null },
+  { sessionQuestionId:1502,questionId:502,questionIndex:2,totalQuestionCount:5,type:"SHORT_ANSWER",questionText:"What color is the apple?",questionTextKo:"사과는 무슨 색일까요?",imageUrl:"/demo/questions/red-apple-color.webp",hintText:"It is ____.",ttsUrl:null },
+  { sessionQuestionId:1503,questionId:503,questionIndex:3,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"What fruit do you like?",questionTextKo:"어떤 과일을 좋아하나요?",imageUrl:"/demo/questions/fruit-bowl.webp",hintText:"I like ____.",ttsUrl:null },
+  { sessionQuestionId:1504,questionId:504,questionIndex:4,totalQuestionCount:5,type:"PICTURE_DESCRIPTION",questionText:"Is the apple delicious?",questionTextKo:"사과가 맛있어 보이나요?",imageUrl:"/demo/questions/delicious-apple.webp",hintText:"Yes, it is ____.",ttsUrl:null },
+  { sessionQuestionId:1505,questionId:505,questionIndex:5,totalQuestionCount:5,type:"OPEN_SPEAKING",questionText:"When do you eat apples?",questionTextKo:"언제 사과를 먹나요?",imageUrl:"/demo/questions/apple-breakfast.webp",hintText:"I eat apples at ____.",ttsUrl:null },
 ];
 
 const defaultState: DemoState = {
