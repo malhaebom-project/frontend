@@ -1,5 +1,5 @@
 import type {
-  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, CreateChildInput,
+  AdminQuestion, AdminQuestionInput, AdminQuestionQuery, AnswerFeedback, AuthTokens, Child, CreateChildInput,
   CreateLearningSessionInput, ExplanationResponse, FollowUpQuestion, Guardian, HintResponse,
   LearningHistory, LearningHistoryQuery, LearningSession, LearningTopic, LoginInput,
   PageData, Question, QuestionTts, QuestionTypeOption, SessionResult, SignupInput,
@@ -148,7 +148,8 @@ export const api = {
     request<LearningHistory>(withQuery(`/children/${childId}/learning-history`, query)),
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),
   wrongAnswers: (childId: number) => request<WrongAnswer[]>(`/children/${childId}/wrong-answers`),
-  adminQuestions: (query = "") => request<PageData<AdminQuestion>>(`/admin/questions${query}`),
+  adminQuestions: (query: AdminQuestionQuery = {}) =>
+    request<PageData<AdminQuestion>>(withQuery("/admin/questions", query)),
   adminQuestion: (id: number) => request<AdminQuestion>(`/admin/questions/${id}`),
   createAdminQuestion: (input: AdminQuestionInput) =>
     request<{ questionId: number }>("/admin/questions", { method: "POST", body: JSON.stringify(input) }),

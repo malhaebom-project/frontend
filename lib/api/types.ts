@@ -85,6 +85,10 @@ export interface AdminQuestionInput {
   acceptedAnswers: string[]; requiredKeywords: string[]; hintText: string | null; enabled: boolean;
 }
 export interface AdminQuestion extends AdminQuestionInput { questionId: number }
+export interface AdminQuestionQuery {
+  topicId?: number; type?: QuestionType; difficulty?: Difficulty; enabled?: boolean;
+  page?: number; size?: number;
+}
 export interface PageData<T> {
   content: T[]; page: number; size: number; totalElements: number; totalPages: number;
 }

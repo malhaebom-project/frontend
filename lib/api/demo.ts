@@ -53,6 +53,11 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   }
   const childMatch=path.match(/^\/children\/(\d+)$/);
   if(childMatch&&method==="GET")return (state.children.find(v=>v.childId===Number(childMatch[1]))??state.children[0]) as T;
+  if(childMatch&&method==="PATCH"){
+    const childId=Number(childMatch[1]);const input=jsonBody(init);const index=state.children.findIndex(child=>child.childId===childId);
+    if(index<0)throw new Error("어린이 프로필을 찾을 수 없습니다.");
+    state.children[index]={...state.children[index],...input,childId};writeState(state);return state.children[index] as T;
+  }
   if(childMatch&&method==="DELETE"){
     const childId=Number(childMatch[1]);
     state.children=state.children.filter(child=>child.childId!==childId);
