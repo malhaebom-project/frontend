@@ -51,12 +51,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 }
 
 async function reissue() {
-  const refreshToken = readStorage(REFRESH_KEY);
-  if (!refreshToken) return false;
-  const response = await fetch(`${API_BASE}/auth/reissue`, {
+  const response = await fetch(`${API_BASE}/auth/refresh`, {
     method: "POST", credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
   });
   const body = await response.json();
   if (!response.ok || !body.success) { clearAuth(); return false; }
@@ -66,7 +63,7 @@ async function reissue() {
 
 export function persistAuth(tokens: AuthTokens) {
   sessionStorage.setItem(ACCESS_KEY, tokens.accessToken);
-  sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+  if (tokens.refreshToken) sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
   if (tokens.guardian) sessionStorage.setItem(GUARDIAN_KEY, JSON.stringify(tokens.guardian));
 }
 export function loginAsDemo() {
@@ -105,7 +102,7 @@ export const api = {
     const data = await request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(input) });
     persistAuth(data); return data;
   },
-  logout: async () => { if (!isDemoMode()) await request<null>("/auth/logout", { method: "POST" }); clearAuth(); },
+  logout: async () => { if (!isDemoMode()) await request<null>("/auth/logout", { method: "DELETE" }); clearAuth(); },
   children: () => request<Child[]>("/children"),
   child: (id: number) => request<Child>(`/children/${id}`),
   createChild: (input: Omit<Child, "childId">) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
