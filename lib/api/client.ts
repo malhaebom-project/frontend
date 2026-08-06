@@ -1,5 +1,5 @@
 import type {
-  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, Difficulty, FollowUpQuestion, Guardian, LearningHistory,
+  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, Difficulty, Guardian, LearningHistory,
   LearningSession, LearningTopic, Question, QuestionType, QuestionTypeOption,
   PageData, SessionResult, SpeechAnswer, Statistics, VisemeCue, WrongAnswer,
 } from "./types";
@@ -131,8 +131,6 @@ export const api = {
     request<{ hintText: string; hintTtsUrl: string | null; hintTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
   explanation: (sessionId: number, questionId: number, answerId: number) =>
     request<{ explanationText: string; explanationTtsUrl: string | null; explanationTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
-  followUp: (sessionId: number, sessionQuestionId: number, answerId: number) =>
-    request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
   questionTts: (questionId: number) => request<{ questionId: number; text: string; audioUrl: string }>(`/questions/${questionId}/tts`),
   history: (childId: number, query = "") => request<LearningHistory>(`/children/${childId}/learning-history${query}`),
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),

@@ -65,11 +65,6 @@ export interface WrongAnswer {
   answerId: number; questionId: number; questionText: string; imageUrl: string | null;
   answerText: string; modelAnswer: string; feedbackText: string; answeredAt: string;
 }
-export interface FollowUpQuestion {
-  followUpQuestionId: number; questionText: string; questionTextKo: string;
-  ttsUrl: string | null; followUpsRemaining: number;
-  ttsVisemes?: VisemeCue[];
-}
 export interface AdminQuestionInput {
   topicId: number; type: QuestionType; difficulty: Difficulty; gradeMin: number; gradeMax: number;
   questionText: string; questionTextKo: string; imageUrl: string | null; modelAnswer: string;

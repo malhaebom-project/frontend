@@ -26,6 +26,6 @@ export default function SignupPage() {
       {error&&<ErrorBox>{error}</ErrorBox>}
       <button disabled={loading} className="btn btn-primary btn-large w-full disabled:opacity-60">{loading?"계정 만드는 중…":"회원가입"}</button>
     </form>
-    <p className="mt-6 text-center text-sm text-[#71809d]">이미 계정이 있나요? <Link href="/login" className="font-extrabold text-[#4f7df3]">로그인</Link></p>
+    <p className="mt-6 text-center text-sm text-(--muted-2)">이미 계정이 있나요? <Link href="/login" className="font-extrabold text-(--accent)">로그인</Link></p>
   </AuthLayout>;
 }
