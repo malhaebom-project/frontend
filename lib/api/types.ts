@@ -17,7 +17,7 @@ export interface VisemeCue {
 export interface Guardian { guardianId: number; email: string; name: string; role: Role }
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType?: "Bearer";
   expiresInSeconds?: number;
   expiresIn?: number;
