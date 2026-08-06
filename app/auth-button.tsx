@@ -8,7 +8,7 @@ import { useHydrated } from "@/lib/use-hydrated";
 export function AuthButton() {
   const router=useRouter(); const hydrated=useHydrated(); const loggedIn=hydrated&&isAuthenticated(); const name=hydrated?(getGuardian()?.name??""):"";
   if(!loggedIn) return <button onClick={()=>router.push("/login")} className="btn btn-ghost">보호자 로그인 <span aria-hidden>↗</span></button>;
-  return <button className="btn btn-ghost" onClick={async()=>{try{await api.logout();}finally{router.replace("/");}}}>{name&&`${name} · `}로그아웃</button>;
+  return <button className="btn btn-ghost" onClick={async()=>{try{await api.logout();}finally{router.replace("/");}}}>{name&&<span className="auth-button-name" title={name}>{name} · </span>}로그아웃</button>;
 }
 
 export function CurrentProfileBadge() {
