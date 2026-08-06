@@ -102,7 +102,10 @@ export const api = {
     const data = await request<AuthTokens>("/auth/login", { method: "POST", body: JSON.stringify(input) });
     persistAuth(data); return data;
   },
-  logout: async () => { if (!isDemoMode()) await request<null>("/auth/logout", { method: "DELETE" }); clearAuth(); },
+  logout: async () => {
+    try { if (!isDemoMode()) await request<null>("/auth/logout", { method: "DELETE" }); }
+    finally { clearAuth(); }
+  },
   children: () => request<Child[]>("/children"),
   child: (id: number) => request<Child>(`/children/${id}`),
   createChild: (input: Omit<Child, "childId">) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
