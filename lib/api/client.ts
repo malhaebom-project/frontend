@@ -10,6 +10,7 @@ const ACCESS_KEY = "malhaebom.accessToken";
 const REFRESH_KEY = "malhaebom.refreshToken";
 const GUARDIAN_KEY = "malhaebom.guardian";
 const DEMO_KEY = "malhaebom.demoMode";
+const LOCAL_CHILDREN_PREFIX = "malhaebom.localChildren";
 
 export const demoLoginEnabled =
   process.env.NODE_ENV === "development" ||
@@ -35,6 +36,48 @@ function readStorage(key: string) {
 
 function writeStorage(key: string, value: string) {
   window.localStorage.setItem(key, value);
+}
+
+function localChildrenKey() {
+  const token = readStorage(ACCESS_KEY);
+  if (!token) return `${LOCAL_CHILDREN_PREFIX}.anonymous`;
+  try {
+    const encoded = token.split(".")[1];
+    if (!encoded) throw new Error("JWT payload is missing");
+    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+    const payload = JSON.parse(window.atob(padded)) as { userId?: number | string; sub?: string };
+    return `${LOCAL_CHILDREN_PREFIX}.${payload.userId ?? payload.sub ?? token.slice(-16)}`;
+  } catch {
+    return `${LOCAL_CHILDREN_PREFIX}.${token.slice(-16)}`;
+  }
+}
+
+function readLocalChildren(): Child[] {
+  try {
+    const raw = window.localStorage.getItem(localChildrenKey());
+    return raw ? JSON.parse(raw) as Child[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalChildren(children: Child[]) {
+  window.localStorage.setItem(localChildrenKey(), JSON.stringify(children));
+}
+
+function localChild(id: number) {
+  const child = readLocalChildren().find(item => item.childId === id);
+  if (!child) throw new ApiError("어린이 프로필을 찾을 수 없습니다.", 404, "CHILD_PROFILE_NOT_FOUND");
+  return child;
+}
+
+async function withLocalChildFallback<T>(requestRemote: () => Promise<T>, requestLocal: () => T): Promise<T> {
+  try {
+    return await requestRemote();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404 && error.code === "UNKNOWN_ERROR") return requestLocal();
+    throw error;
+  }
 }
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
@@ -123,12 +166,38 @@ export const api = {
     try { if (!isDemoMode()) await request<null>("/auth/logout", { method: "DELETE" }); }
     finally { clearAuth(); }
   },
-  children: () => request<Child[]>("/children"),
-  child: (id: number) => request<Child>(`/children/${id}`),
-  createChild: (input: Omit<Child, "childId">) => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
-  updateChild: (id: number, input: Partial<Pick<Child, "nickname" | "age" | "grade" | "level">>) =>
-    request<Child>(`/children/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
-  deleteChild: (id: number) => request<null>(`/children/${id}`, { method: "DELETE" }),
+  children: () => withLocalChildFallback(
+    () => request<Child[]>("/children"),
+    () => readLocalChildren(),
+  ),
+  child: (id: number) => withLocalChildFallback(
+    () => request<Child>(`/children/${id}`),
+    () => localChild(id),
+  ),
+  createChild: (input: Omit<Child, "childId">) => withLocalChildFallback(
+    () => request<Child>("/children", { method: "POST", body: JSON.stringify(input) }),
+    () => {
+      const child: Child = { ...input, childId: Date.now(), totalStudyCount: 0, totalCorrectRate: 0 };
+      writeLocalChildren([...readLocalChildren(), child]);
+      return child;
+    },
+  ),
+  updateChild: (id: number, input: Partial<Pick<Child, "nickname" | "age" | "grade" | "level">>) => withLocalChildFallback(
+    () => request<Child>(`/children/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+    () => {
+      const child = { ...localChild(id), ...input, childId: id };
+      writeLocalChildren(readLocalChildren().map(item => item.childId === id ? child : item));
+      return child;
+    },
+  ),
+  deleteChild: (id: number) => withLocalChildFallback(
+    () => request<null>(`/children/${id}`, { method: "DELETE" }),
+    () => {
+      localChild(id);
+      writeLocalChildren(readLocalChildren().filter(item => item.childId !== id));
+      return null;
+    },
+  ),
   topics: () => request<LearningTopic[]>("/learning-topics"),
   questionTypes: () => request<QuestionTypeOption[]>("/question-types"),
   createSession: (input: { childId: number; topicId: number; difficulty: Difficulty; questionTypes: QuestionType[]; questionCount: number }) =>
