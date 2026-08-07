@@ -20,7 +20,21 @@ export class ApiError extends Error {
 }
 
 function readStorage(key: string) {
-  return typeof window === "undefined" ? null : window.sessionStorage.getItem(key);
+  if (typeof window === "undefined") return null;
+  const persisted = window.localStorage.getItem(key);
+  if (persisted !== null) return persisted;
+
+  // 기존 버전에서 sessionStorage에 저장된 로그인도 한 번만 자동 이전합니다.
+  const legacy = window.sessionStorage.getItem(key);
+  if (legacy !== null) {
+    window.localStorage.setItem(key, legacy);
+    window.sessionStorage.removeItem(key);
+  }
+  return legacy;
+}
+
+function writeStorage(key: string, value: string) {
+  window.localStorage.setItem(key, value);
 }
 
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
@@ -62,9 +76,9 @@ async function reissue() {
 }
 
 export function persistAuth(tokens: AuthTokens) {
-  sessionStorage.setItem(ACCESS_KEY, tokens.accessToken);
-  if (tokens.refreshToken) sessionStorage.setItem(REFRESH_KEY, tokens.refreshToken);
-  if (tokens.guardian) sessionStorage.setItem(GUARDIAN_KEY, JSON.stringify(tokens.guardian));
+  writeStorage(ACCESS_KEY, tokens.accessToken);
+  if (tokens.refreshToken) writeStorage(REFRESH_KEY, tokens.refreshToken);
+  if (tokens.guardian) writeStorage(GUARDIAN_KEY, JSON.stringify(tokens.guardian));
 }
 export function loginAsDemo() {
   if (!demoLoginEnabled) throw new ApiError("체험용 로그인은 현재 사용할 수 없습니다.", 403, "DEMO_LOGIN_DISABLED");
@@ -79,14 +93,17 @@ export function loginAsDemo() {
       role: "GUARDIAN",
     },
   });
-  sessionStorage.setItem(DEMO_KEY, "true");
+  writeStorage(DEMO_KEY, "true");
 }
 export function isDemoMode() {
   return readStorage(DEMO_KEY) === "true";
 }
 export function clearAuth() {
   if (typeof window === "undefined") return;
-  [ACCESS_KEY, REFRESH_KEY, GUARDIAN_KEY, DEMO_KEY].forEach(key => sessionStorage.removeItem(key));
+  [ACCESS_KEY, REFRESH_KEY, GUARDIAN_KEY, DEMO_KEY].forEach(key => {
+    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
+  });
 }
 export function getGuardian(): Guardian | null {
   const raw = readStorage(GUARDIAN_KEY);
