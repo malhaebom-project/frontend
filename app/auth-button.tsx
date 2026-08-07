@@ -1,14 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { api, getGuardian, isAuthenticated } from "@/lib/api/client";
 import { learningState } from "@/lib/api/session";
 import { useHydrated } from "@/lib/use-hydrated";
 
 export function AuthButton() {
-  const router=useRouter(); const hydrated=useHydrated(); const loggedIn=hydrated&&isAuthenticated(); const name=hydrated?(getGuardian()?.name??""):"";
+  const router=useRouter(); const hydrated=useHydrated(); const [loggingOut,setLoggingOut]=useState(false); const loggedIn=hydrated&&isAuthenticated(); const name=hydrated?(getGuardian()?.name??""):"";
+  async function logout(){
+    setLoggingOut(true);
+    try {await api.logout();}
+    catch {/* 백엔드 로그아웃 실패 시에도 api.logout()이 로컬 세션을 정리합니다. */}
+    finally {
+      setLoggingOut(false);
+      router.replace("/");
+      router.refresh();
+    }
+  }
   if(!loggedIn) return <button onClick={()=>router.push("/login")} className="btn btn-ghost">보호자 로그인 <span aria-hidden>↗</span></button>;
-  return <button className="btn btn-ghost" onClick={async()=>{try{await api.logout();}finally{router.replace("/");}}}>{name&&<span className="auth-button-name" title={name}>{name} · </span>}로그아웃</button>;
+  return <button type="button" className="btn btn-ghost disabled:cursor-wait disabled:opacity-60" onClick={logout} disabled={loggingOut}>{name&&<span className="auth-button-name" title={name}>{name} · </span>}{loggingOut?"로그아웃 중…":"로그아웃"}</button>;
 }
 
 export function CurrentProfileBadge() {
