@@ -101,6 +101,7 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   }
 
   const body = await response.json().catch(() => null);
+  if (response.ok && response.status === 204) return null as T;
   if (!response.ok || !body?.success) {
     throw new ApiError(body?.message ?? "요청을 처리하지 못했습니다.", response.status, body?.errorCode ?? "UNKNOWN_ERROR");
   }
@@ -108,12 +109,20 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 }
 
 async function reissue() {
-  const response = await fetch(`${API_BASE}/auth/refresh`, {
+  const refreshToken = readStorage(REFRESH_KEY);
+  let response = await fetch(`${API_BASE}/auth/reissue`, {
     method: "POST", credentials: "include",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
   });
-  const body = await response.json();
-  if (!response.ok || !body.success) { clearAuth(); return false; }
+  if (response.status === 404 || response.status === 405) {
+    response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.success) { clearAuth(); return false; }
   persistAuth(body.data);
   return true;
 }
@@ -163,7 +172,16 @@ export const api = {
     persistAuth(data); return data;
   },
   logout: async () => {
-    try { if (!isDemoMode()) await request<null>("/auth/logout", { method: "DELETE" }); }
+    try {
+      if (!isDemoMode()) {
+        try {
+          await request<null>("/auth/logout", { method: "POST" });
+        } catch (error) {
+          if (!(error instanceof ApiError) || ![404, 405].includes(error.status)) throw error;
+          await request<null>("/auth/logout", { method: "DELETE" });
+        }
+      }
+    }
     finally { clearAuth(); }
   },
   children: () => withLocalChildFallback(
