@@ -115,7 +115,7 @@ type MouthAnimationOptions = {
   visemeCues?: VisemeCue[];
   audioElement?: HTMLAudioElement | null;
   /** Ref holding the performance.now() cue-playback start used when there is
-   * no audioElement (e.g. the character-lab demo). A ref (not state) so
+   * no audioElement. A ref (not state) so
    * updating it never needs to restart this hook's animation loop. */
   simulatedPlaybackStartRef: React.RefObject<number | null>;
   fallbackShape: MouthShapeKey;

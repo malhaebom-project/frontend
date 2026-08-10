@@ -572,47 +572,6 @@ a { color: inherit; text-decoration: none; }
 .home-step-number { display:grid; width:48px; height:48px; place-items:center; border:2px solid var(--green-dark); border-radius:14px; background:var(--green); color:white; box-shadow:0 4px 0 var(--green-dark); font-weight:900; }
 .home-step h3 { margin:20px 0 7px; font-size:20px; font-weight:900; }
 .home-step p { margin:0; color:var(--muted); font-size:15px; line-height:1.55; font-weight:600; }
-.character-lab-shell { min-height:100svh; background:linear-gradient(180deg,#f5fffb,#f8fbff 62%,#fffaf0); }
-.character-lab-preview { align-self:start; background:rgba(255,255,255,.9); }
-.character-lab-stage {
-  display:grid;
-  min-height:520px;
-  place-items:center;
-  overflow:hidden;
-  border:2px solid #dceee8;
-  border-radius:28px;
-  background:
-    radial-gradient(circle at 52% 22%,rgba(255,255,255,.94),transparent 30%),
-    linear-gradient(155deg,#e5f9f2,#e6f2ff 62%,#fff3d4);
-}
-.character-lab-stage .teacher-avatar { width:min(500px,100%); height:520px; }
-.character-state-button,
-.mouth-state-button {
-  display:flex;
-  min-height:92px;
-  flex-direction:column;
-  align-items:flex-start;
-  justify-content:center;
-  gap:5px;
-  padding:14px;
-  border:2px solid #e3e3e3;
-  border-radius:15px;
-  background:#fff;
-  color:var(--navy);
-  text-align:left;
-  box-shadow:0 3px 0 #e3e3e3;
-  cursor:pointer;
-  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;
-}
-.character-state-button:hover,
-.mouth-state-button:hover { transform:translateY(-2px); border-color:#a8df8a; box-shadow:0 5px 0 #a8df8a; }
-.character-state-button.is-active,
-.mouth-state-button.is-active { border-color:var(--green-dark); background:#f2ffe9; box-shadow:0 4px 0 var(--green-dark); }
-.character-state-button strong,
-.mouth-state-button strong { font-size:15px; font-weight:950; }
-.character-state-button span,
-.mouth-state-button span { color:var(--muted); font-size:12px; line-height:1.45; font-weight:700; }
-.mouth-state-button { min-height:84px; align-items:center; text-align:center; }
 .record-button { box-shadow:0 7px 0 var(--green-dark); }
 .record-button:active { transform:translateY(5px); box-shadow:0 2px 0 var(--green-dark); }
 .record-button.is-recording { box-shadow:0 7px 0 #d96d61; }
@@ -700,8 +659,6 @@ a { color: inherit; text-decoration: none; }
   .hero-character .speech { min-width:0; width:min(310px,calc(100vw - 48px)); }
   .home-greeting-bubble { height:154px; padding-inline:24px; }
   .home-steps { grid-template-columns:1fr; }
-  .character-lab-stage { min-height:430px; }
-  .character-lab-stage .teacher-avatar { height:430px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

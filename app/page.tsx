@@ -44,9 +44,6 @@ export default function HomePage() {
             <article className="card home-step"><span className="home-step-number">2</span><h3>버튼 누르고 말하기</h3><p>틀릴 걱정 없이 마이크를 누르고 영어로 편하게 대답해요.</p></article>
             <article className="card home-step"><span className="home-step-number">3</span><h3>칭찬과 별 받기</h3><p>바로 도착한 친절한 피드백을 듣고 작은 성취를 쌓아요.</p></article>
           </div>
-          <div className="mt-8 text-center">
-            <Link href="/character-lab" className="pill">🧪 실험: 2D 영어 선생님 캐릭터 미리보기</Link>
-          </div>
         </div>
       </section>
     </main>
