@@ -7,7 +7,7 @@ import { Buddy } from "../components";
 import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { learningState, saveSessionValue } from "@/lib/api/session";
 import type { Question, SpeechAnswer } from "@/lib/api/types";
-import { playCharacterSpeech, playHintSpeech, stopCharacterSpeech } from "@/lib/character-speech";
+import { playBrowserQuestionSpeech, playHintSpeech, stopCharacterSpeech } from "@/lib/character-speech";
 
 type Status="loading"|"idle"|"recording"|"processing"|"review"|"error";
 
@@ -52,7 +52,7 @@ export default function QuizPage() {
   }
   function recordAgain(){setDraft(null);setStatus("idle");setMessage("좋아요! 버튼을 누르고 다시 말해보세요.");}
   async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playHintSpeech(data.hintText).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
-  function replay(){if(question)playCharacterSpeech({url:question.ttsUrl,text:question.questionText,lang:"en-US",visemes:question.ttsVisemes}).catch(()=>setMessage("음성을 재생하지 못했어요."));}
+  function replay(){if(question)playBrowserQuestionSpeech({text:question.questionText,visemes:question.ttsVisemes}).catch(()=>setMessage("문제 음성을 재생하지 못했어요."));}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">
     <header className="flex min-h-[88px] items-center gap-5"><Link onClick={stopCharacterSpeech} href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-(--accent)">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-(--warn-bg) text-(--star-text)">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
