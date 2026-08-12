@@ -225,7 +225,11 @@ export const api = {
   completeSession: (id: number) => request<SessionResult>(`/learning-sessions/${id}/complete`, { method: "POST" }),
   uploadSpeech: (sessionId: number, sessionQuestionId: number, audio: Blob) => {
     const form = new FormData(); form.append("audio", audio, "answer.webm");
-    return request<SpeechAnswer>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/speech`, { method: "POST", body: form });
+    return request<SpeechAnswer>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/speech`, {
+      method: "POST",
+      body: form,
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+    });
   },
   submitAnswer: (sessionId: number, sessionQuestionId: number, speechAnswerId: number, answerText: string) =>
     request<AnswerFeedback>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/answers`, { method: "POST", body: JSON.stringify({ speechAnswerId, answerText }) }),
