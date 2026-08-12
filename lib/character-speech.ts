@@ -182,7 +182,7 @@ export function playCharacterSpeech({
   text: string;
   lang?: string;
   visemes?: CharacterVisemeCue[];
-  browserVoiceProfile?: "default" | "hint";
+  browserVoiceProfile?: "default" | "hint" | "system";
 }) {
   stopCharacterSpeech();
   const spokenText = toSpeakableText(text);
@@ -235,6 +235,7 @@ export function playBrowserQuestionSpeech({
     text,
     lang: "en-US",
     visemes,
+    browserVoiceProfile: "system",
   });
 }
 
@@ -309,7 +310,7 @@ export async function playKoreanFeedbackSpeech({
   }
 }
 
-function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" = "default") {
+function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" | "system" = "default") {
   if (!("speechSynthesis" in window)) {
     emit({ speaking: false, level: 0, shape: "closed" });
     return Promise.reject(new Error("이 브라우저는 음성 합성을 지원하지 않습니다."));
@@ -329,7 +330,9 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
     utterance.lang = lang;
     // 음성 목록이 아직 비어 있으면 운영체제의 기본 영어 음성을 사용합니다.
     // voiceschanged를 기다리지 않아 클릭 권한이 유지됩니다.
-    utterance.voice = voices.length ? selectFriendlyVoice(voices, lang, voiceProfile) : null;
+    utterance.voice = voiceProfile === "system" || !voices.length
+      ? null
+      : selectFriendlyVoice(voices, lang, voiceProfile);
     utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
     utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
     utterance.volume = lang.startsWith("en") ? .94 : .96;
@@ -366,7 +369,7 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
   });
 }
 
-function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voiceProfile: "default" | "hint" = "default") {
+function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voiceProfile: "default" | "hint" | "system" = "default") {
   const requested = process.env.NEXT_PUBLIC_TTS_VOICE_NAME?.toLowerCase();
   if (requested) {
     const exact = voices.find(voice => voice.name.toLowerCase().includes(requested));
