@@ -328,7 +328,6 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
 
   const synthesis = window.speechSynthesis;
   const generation = ++speechGeneration;
-  const voices = synthesis.getVoices();
 
   return new Promise<void>((resolve, reject) => {
     function startAttempt(retriesRemaining: number) {
@@ -338,18 +337,40 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
+      const voices = synthesis.getVoices();
       utterance.lang = lang;
-      // 음성 목록이 아직 비어 있으면 운영체제의 기본 영어 음성을 사용합니다.
-      // voiceschanged를 기다리지 않아 클릭 권한이 유지됩니다.
-      utterance.voice = voiceProfile === "system" || !voices.length
-        ? null
-        : selectFriendlyVoice(voices, lang, voiceProfile);
+      // 문제 음성은 브라우저 목록에서 실제로 설치된 로컬 영어 음성을
+      // 우선 사용합니다. 로컬 음성이 없을 때만 시스템 기본값을 사용합니다.
+      utterance.voice = voiceProfile === "system"
+        ? selectSystemVoice(voices, lang)
+        : voices.length ? selectFriendlyVoice(voices, lang, voiceProfile) : null;
       utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
       utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
       utterance.volume = lang.startsWith("en") ? .94 : .96;
       activeUtterance = utterance;
+      let started = false;
+
+      const startTimeout = window.setTimeout(() => {
+        if (started || generation !== speechGeneration || activeUtterance !== utterance) return;
+
+        utterance.onstart = null;
+        utterance.onboundary = null;
+        utterance.onend = null;
+        utterance.onerror = null;
+        activeUtterance = null;
+        synthesis.cancel();
+        finishCharacterSpeech();
+
+        if (retriesRemaining > 0) {
+          window.setTimeout(() => startAttempt(retriesRemaining - 1), 120);
+          return;
+        }
+        reject(new Error("start-timeout"));
+      }, 1500);
 
       utterance.onstart = () => {
+        started = true;
+        window.clearTimeout(startTimeout);
         if (generation === speechGeneration && activeUtterance === utterance) beginAnimation();
       };
       utterance.onboundary = event => {
@@ -367,6 +388,7 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
         }
       };
       utterance.onend = () => {
+        window.clearTimeout(startTimeout);
         if (activeUtterance === utterance) {
           activeUtterance = null;
           finishCharacterSpeech();
@@ -374,6 +396,7 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
         resolve();
       };
       utterance.onerror = event => {
+        window.clearTimeout(startTimeout);
         if (activeUtterance !== utterance) return;
         activeUtterance = null;
         finishCharacterSpeech();
@@ -431,6 +454,15 @@ function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voice
       return { voice, score };
     })
     .sort((a, b) => b.score - a.score)[0]?.voice ?? null;
+}
+
+function selectSystemVoice(voices: SpeechSynthesisVoice[], lang: string) {
+  const language = lang.toLowerCase().split("-")[0];
+  const matching = voices.filter(voice => voice.lang.toLowerCase().startsWith(language));
+  return matching.find(voice => voice.localService)
+    ?? matching.find(voice => voice.default)
+    ?? matching[0]
+    ?? null;
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
