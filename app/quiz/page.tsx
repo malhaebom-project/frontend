@@ -7,7 +7,7 @@ import { Buddy } from "../components";
 import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { learningState, saveSessionValue } from "@/lib/api/session";
 import type { Question, SpeechAnswer } from "@/lib/api/types";
-import { playCharacterSpeech, stopCharacterSpeech } from "@/lib/character-speech";
+import { playCharacterSpeech, playKoreanFeedbackSpeech, stopCharacterSpeech } from "@/lib/character-speech";
 
 type Status="loading"|"idle"|"recording"|"processing"|"review"|"error";
 
@@ -51,7 +51,7 @@ export default function QuizPage() {
     } catch(e){setStatus("error");setMessage(errorMessage(e));}
   }
   function recordAgain(){setDraft(null);setStatus("idle");setMessage("좋아요! 버튼을 누르고 다시 말해보세요.");}
-  async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playCharacterSpeech({url:data.hintTtsUrl,text:data.hintText,lang:"ko-KR",visemes:data.hintTtsVisemes}).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
+  async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playKoreanFeedbackSpeech({text:data.hintText}).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
   function replay(){if(question)playCharacterSpeech({url:question.ttsUrl,text:question.questionText,lang:"en-US",visemes:question.ttsVisemes}).catch(()=>setMessage("음성을 재생하지 못했어요."));}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">

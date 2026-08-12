@@ -42,6 +42,15 @@ const avoidedVoiceNames = [
   "mark", "guy", "george", "male", "남성", "grandma", "grandpa",
 ];
 
+export function toSpeakableText(text: string, lang = "en-US") {
+  const blankLabel = lang.toLowerCase().startsWith("ko") ? "빈칸" : "blank";
+  return text
+    .replace(/_+/g, ` ${blankLabel} `)
+    .replace(/\s+([,.!?;:])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function emit(detail: CharacterSpeechEventDetail) {
   window.dispatchEvent(new CustomEvent<CharacterSpeechEventDetail>(CHARACTER_SPEECH_EVENT, { detail }));
 }
@@ -162,7 +171,8 @@ export function playCharacterSpeech({
   visemes?: CharacterVisemeCue[];
 }) {
   stopCharacterSpeech();
-  activeVisemes = textToVisemes(text);
+  const spokenText = toSpeakableText(text, lang);
+  activeVisemes = textToVisemes(spokenText);
   activeCueTrack = normalizeCueTrack(visemes);
 
   if (url) {
@@ -174,7 +184,7 @@ export function playCharacterSpeech({
     const ensureFallbackCueTrack = () => {
       if (activeAudio !== audio || activeCueTrack) return;
       if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-      activeCueTrack = normalizeCueTrack(buildApproximateVisemeCues(text, audio.duration * 1000));
+      activeCueTrack = normalizeCueTrack(buildApproximateVisemeCues(spokenText, audio.duration * 1000));
     };
     audio.addEventListener("loadedmetadata", ensureFallbackCueTrack, { once: true });
     audio.addEventListener("play", () => {
@@ -184,15 +194,15 @@ export function playCharacterSpeech({
     audio.addEventListener("ended", stopCharacterSpeech, { once: true });
     audio.addEventListener("error", () => {
       activeCueTrack = null;
-      void speakWithBrowser(text, lang);
+      void speakWithBrowser(spokenText, lang);
     }, { once: true });
     return audio.play().catch(() => {
       activeCueTrack = null;
-      return speakWithBrowser(text, lang);
+      return speakWithBrowser(spokenText, lang);
     });
   }
 
-  return speakWithBrowser(text, lang);
+  return speakWithBrowser(spokenText, lang);
 }
 
 export async function playKoreanFeedbackSpeech({
@@ -204,6 +214,7 @@ export async function playKoreanFeedbackSpeech({
   fallbackUrl?: string | null;
   fallbackVisemes?: CharacterVisemeCue[];
 }) {
+  const spokenText = toSpeakableText(text, "ko-KR");
   // Backend or demo-provided audio is authoritative and can start directly
   // inside the click gesture. Avoiding an unnecessary Azure proxy request
   // here also prevents browsers from dropping media autoplay permission
@@ -211,21 +222,21 @@ export async function playKoreanFeedbackSpeech({
   if (fallbackUrl) {
     return playCharacterSpeech({
       url: fallbackUrl,
-      text,
+      text: spokenText,
       lang: "ko-KR",
       visemes: fallbackVisemes,
     });
   }
 
   try {
-    let speech = koreanFeedbackCache.get(text);
+    let speech = koreanFeedbackCache.get(spokenText);
 
     if (!speech) {
       const response = await fetch("/api/tts/feedback", {
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: spokenText }),
       });
 
       if (!response.ok) throw new Error(`Azure feedback TTS unavailable: ${response.status}`);
@@ -246,19 +257,19 @@ export async function playKoreanFeedbackSpeech({
         audioDataUrl: body.data.audioDataUrl,
         visemes: body.data.visemes ?? [],
       };
-      koreanFeedbackCache.set(text, speech);
+      koreanFeedbackCache.set(spokenText, speech);
     }
 
     return playCharacterSpeech({
       url: speech.audioDataUrl,
-      text,
+      text: spokenText,
       lang: "ko-KR",
       visemes: speech.visemes,
     });
   } catch {
     return playCharacterSpeech({
       url: fallbackUrl,
-      text,
+      text: spokenText,
       lang: "ko-KR",
       visemes: fallbackVisemes,
     });
