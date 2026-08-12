@@ -314,105 +314,40 @@ export async function playKoreanFeedbackSpeech({
   }
 }
 
-function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" = "default") {
+async function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" = "default") {
   if (!("speechSynthesis" in window)) {
     emit({ speaking: false, level: 0, shape: "closed" });
-    return Promise.reject(new Error("이 브라우저는 음성 합성을 지원하지 않습니다."));
+    throw new Error("이 브라우저는 음성 합성을 지원하지 않습니다.");
   }
-
-  const synthesis = window.speechSynthesis;
   const generation = ++speechGeneration;
-  const voices = synthesis.getVoices();
-  const preferredVoice = selectFriendlyVoice(voices, lang, voiceProfile);
+  const immediateVoices = window.speechSynthesis.getVoices();
+  const voices = immediateVoices.length ? immediateVoices : await loadVoices();
+  if (generation !== speechGeneration) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.voice = selectFriendlyVoice(voices, lang, voiceProfile);
+  utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
+  utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
+  utterance.volume = lang.startsWith("en") ? .94 : .96;
+  activeUtterance = utterance;
+  utterance.onstart = beginAnimation;
+  utterance.onboundary = event => {
+    if (activeCueTrack || (event.name && event.name !== "word")) return;
 
-  return new Promise<void>((resolve, reject) => {
-    let settled = false;
+    const remainingText = text.slice(event.charIndex);
+    const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
+    const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
+    const boundaryVisemes = textToVisemes(spokenUnit);
 
-    function finish(error?: Error) {
-      if (settled) return;
-      settled = true;
-      if (error) reject(error);
-      else resolve();
+    if (boundaryVisemes.length > 2) {
+      activeVisemes = boundaryVisemes;
+      startedAt = performance.now();
+      lastVisemeSlot = -1;
     }
-
-    function startAttempt(voice: SpeechSynthesisVoice | null, canRetry: boolean) {
-      if (generation !== speechGeneration) {
-        finish();
-        return;
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      let started = false;
-      utterance.lang = lang;
-      utterance.voice = voice;
-      utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
-      utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
-      utterance.volume = lang.startsWith("en") ? .94 : .96;
-      activeUtterance = utterance;
-
-      const startTimer = window.setTimeout(() => {
-        if (started || activeUtterance !== utterance || generation !== speechGeneration) return;
-        activeUtterance = null;
-        utterance.onstart = null;
-        utterance.onboundary = null;
-        utterance.onend = null;
-        utterance.onerror = null;
-        synthesis.cancel();
-
-        if (canRetry) {
-          window.setTimeout(() => startAttempt(null, false), 60);
-        } else {
-          emit({ speaking: false, level: 0, shape: "closed" });
-          finish(new Error("브라우저 음성 엔진이 시작되지 않았습니다."));
-        }
-      }, 1200);
-
-      utterance.onstart = () => {
-        if (activeUtterance !== utterance || generation !== speechGeneration) return;
-        started = true;
-        window.clearTimeout(startTimer);
-        beginAnimation();
-      };
-      utterance.onboundary = event => {
-        if (activeCueTrack || (event.name && event.name !== "word")) return;
-
-        const remainingText = text.slice(event.charIndex);
-        const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
-        const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
-        const boundaryVisemes = textToVisemes(spokenUnit);
-
-        if (boundaryVisemes.length > 2) {
-          activeVisemes = boundaryVisemes;
-          startedAt = performance.now();
-          lastVisemeSlot = -1;
-        }
-      };
-      utterance.onend = () => {
-        window.clearTimeout(startTimer);
-        if (activeUtterance === utterance) stopCharacterSpeech();
-        finish();
-      };
-      utterance.onerror = event => {
-        window.clearTimeout(startTimer);
-        if (activeUtterance !== utterance) return;
-        activeUtterance = null;
-
-        if (canRetry && event.error !== "not-allowed") {
-          synthesis.cancel();
-          window.setTimeout(() => startAttempt(null, false), 60);
-          return;
-        }
-
-        emit({ speaking: false, level: 0, shape: "closed" });
-        finish(new Error(`브라우저 음성 재생 실패: ${event.error}`));
-      };
-
-      synthesis.resume();
-      synthesis.speak(utterance);
-    }
-
-    startAttempt(preferredVoice, true);
-  });
+  };
+  utterance.onend = stopCharacterSpeech;
+  utterance.onerror = stopCharacterSpeech;
+  window.speechSynthesis.speak(utterance);
 }
 
 function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voiceProfile: "default" | "hint" = "default") {
@@ -455,11 +390,20 @@ function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voice
     .sort((a, b) => b.score - a.score)[0]?.voice ?? null;
 }
 
-// Warm the voice list before the first click. If it has not populated yet,
-// speakWithBrowser uses the browser's default voice without delaying speak().
-if (typeof window !== "undefined" && "speechSynthesis" in window) {
-  window.speechSynthesis.getVoices();
-  window.speechSynthesis.addEventListener("voiceschanged", () => {
-    window.speechSynthesis.getVoices();
-  }, { once: true });
+function loadVoices() {
+  const immediate = window.speechSynthesis.getVoices();
+  if (immediate.length) return Promise.resolve(immediate);
+
+  return new Promise<SpeechSynthesisVoice[]>(resolve => {
+    const timeout = window.setTimeout(() => {
+      window.speechSynthesis.removeEventListener("voiceschanged", handleVoices);
+      resolve(window.speechSynthesis.getVoices());
+    }, 800);
+    function handleVoices() {
+      window.clearTimeout(timeout);
+      window.speechSynthesis.removeEventListener("voiceschanged", handleVoices);
+      resolve(window.speechSynthesis.getVoices());
+    }
+    window.speechSynthesis.addEventListener("voiceschanged", handleVoices);
+  });
 }
