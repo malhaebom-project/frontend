@@ -228,7 +228,13 @@ export function playQuestionSpeech({
   text: string;
   visemes?: CharacterVisemeCue[];
 }) {
-  const source = url ?? `/api/tts/question?text=${encodeURIComponent(text)}`;
+  // 배포 환경은 백엔드가 제공하는 음원을 우선 사용하고, URL이 없으면
+  // 클릭 시점의 브라우저 TTS로 곧바로 대체합니다. macOS `say` 기반
+  // 로컬 보조 경로는 개발 서버에서만 사용할 수 있습니다.
+  const source = url?.trim()
+    || (process.env.NODE_ENV === "development"
+      ? `/api/tts/question?text=${encodeURIComponent(text)}`
+      : null);
   return playCharacterSpeech({
     url: source,
     text,

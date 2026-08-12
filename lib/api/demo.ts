@@ -127,6 +127,11 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
     };
     return question as T;
   }
+  const questionTtsMatch=path.match(/^\/questions\/(\d+)\/tts$/);
+  if(questionTtsMatch){
+    const seed=activeQuestionSeed(state);
+    return {questionId:Number(questionTtsMatch[1]),text:seed.questionText,audioUrl:null} as T;
+  }
   const sessionMatch=path.match(/^\/learning-sessions\/(\d+)$/);
   if(sessionMatch&&state.session)return {...state.session,currentQuestionIndex:state.currentQuestion,correctCount:state.correctCount} as T;
   const completeMatch=path.match(/^\/learning-sessions\/(\d+)\/complete$/);

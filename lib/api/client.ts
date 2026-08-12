@@ -1,7 +1,7 @@
 import type {
-  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, Difficulty, Guardian, LearningHistory,
-  LearningSession, LearningTopic, Question, QuestionType, QuestionTypeOption,
-  PageData, SessionResult, SpeechAnswer, Statistics, VisemeCue, WrongAnswer,
+  AdminQuestion, AdminQuestionInput, AnswerFeedback, AuthTokens, Child, Difficulty, ExplanationResponse,
+  FollowUpQuestion, Guardian, HintResponse, LearningHistory, LearningSession, LearningTopic, Question,
+  QuestionTts, QuestionType, QuestionTypeOption, PageData, SessionResult, SpeechAnswer, Statistics, WrongAnswer,
 } from "./types";
 import { demoRequest } from "./demo";
 
@@ -236,10 +236,12 @@ export const api = {
   skipRetry: (sessionId: number, sessionQuestionId: number) =>
     request<null>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/skip-retry`, { method: "POST" }),
   hint: (sessionId: number, questionId: number) =>
-    request<{ hintText: string; hintTtsUrl: string | null; hintTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
+    request<HintResponse>(`/learning-sessions/${sessionId}/questions/${questionId}/hint`, { method: "POST" }),
   explanation: (sessionId: number, questionId: number, answerId: number) =>
-    request<{ explanationText: string; explanationTtsUrl: string | null; explanationTtsVisemes?: VisemeCue[] }>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
-  questionTts: (questionId: number) => request<{ questionId: number; text: string; audioUrl: string }>(`/questions/${questionId}/tts`),
+    request<ExplanationResponse>(`/learning-sessions/${sessionId}/questions/${questionId}/explanation`, { method: "POST", body: JSON.stringify({ answerId }) }),
+  followUp: (sessionId: number, sessionQuestionId: number, answerId: number) =>
+    request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
+  questionTts: (questionId: number) => request<QuestionTts>(`/questions/${questionId}/tts`),
   history: (childId: number, query = "") => request<LearningHistory>(`/children/${childId}/learning-history${query}`),
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),
   wrongAnswers: (childId: number) => request<WrongAnswer[]>(`/children/${childId}/wrong-answers`),

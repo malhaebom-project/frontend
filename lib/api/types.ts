@@ -39,6 +39,19 @@ export interface Question {
   questionText: string; questionTextKo: string; imageUrl: string | null; hintText: string | null; ttsUrl: string | null;
   ttsVisemes?: VisemeCue[];
 }
+export interface QuestionTts {
+  questionId: number; text: string; audioUrl: string | null;
+}
+export interface HintResponse {
+  hintText: string; hintTtsUrl: string | null; hintTtsVisemes?: VisemeCue[];
+}
+export interface ExplanationResponse {
+  explanationText: string; explanationTtsUrl: string | null; explanationTtsVisemes?: VisemeCue[];
+}
+export interface FollowUpQuestion {
+  followUpQuestionId: number; questionText: string; questionTextKo: string;
+  ttsUrl: string | null; followUpsRemaining: number;
+}
 export interface SpeechAnswer { speechAnswerId: number; transcript: string; confidence: number; audioUrl: string | null }
 export interface AnswerFeedback {
   answerId: number; sessionQuestionId: number; answerText: string; attemptNo: number; result: AnswerResult; score: number;
