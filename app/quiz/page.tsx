@@ -14,6 +14,7 @@ type Status="loading"|"idle"|"recording"|"processing"|"review"|"error";
 export default function QuizPage() {
   const router=useRouter(); const [question,setQuestion]=useState<Question|null>(null); const [status,setStatus]=useState<Status>("loading");
   const [message,setMessage]=useState("문제를 준비하고 있어요."); const [hint,setHint]=useState(""); const recorder=useRef<MediaRecorder|null>(null); const chunks=useRef<Blob[]>([]);
+  const [hintThinking,setHintThinking]=useState(false);
   const [draft,setDraft]=useState<SpeechAnswer|null>(null);
   const [session] = useState(() => learningState.session());
   useEffect(()=>{
@@ -51,12 +52,24 @@ export default function QuizPage() {
     } catch(e){setStatus("error");setMessage(errorMessage(e));}
   }
   function recordAgain(){setDraft(null);setStatus("idle");setMessage("좋아요! 버튼을 누르고 다시 말해보세요.");}
-  async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playHintSpeech(data.hintText).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
+  async function requestHint(){
+    if(!session||!question)return;
+    setHintThinking(true);
+    try {
+      const data=await api.hint(session.sessionId,question.questionId);
+      setHint(data.hintText);
+      await playHintSpeech(data.hintText);
+    } catch(e) {
+      setMessage(errorMessage(e));
+    } finally {
+      setHintThinking(false);
+    }
+  }
   function replay(){if(question)playBrowserQuestionSpeech({text:question.questionText,visemes:question.ttsVisemes}).catch(error=>setMessage(`문제 음성 재생 실패 (${error instanceof Error?error.message:"UNKNOWN"})`));}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">
     <header className="flex min-h-[88px] items-center gap-5"><Link onClick={stopCharacterSpeech} href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-(--accent)">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-(--warn-bg) text-(--star-text)">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
-    <section className="grid items-center gap-8 py-4 lg:grid-cols-[.75fr_1.25fr]"><div className="flex flex-col items-center"><div className="quiz-character-scene"><div className="quiz-character-scene-tint" aria-hidden="true"/><Buddy motion={status==="recording"?"listening":status==="processing"?"thinking":"idle"}/></div><div className="speech mt-5 w-full max-w-[410px] text-center"><p className="mb-2 text-sm font-extrabold text-(--accent)">{question?.questionTextKo??"문제를 불러오는 중"}</p><h1 className="speech-en">{question?.questionText??"…"}</h1><button type="button" onClick={replay} disabled={!question} className="btn btn-ghost mt-4 text-sm disabled:opacity-40">🔊 다시 듣기</button></div></div>
+    <section className="grid items-center gap-8 py-4 lg:grid-cols-[.75fr_1.25fr]"><div className="flex flex-col items-center"><div className="quiz-character-scene"><div className="quiz-character-scene-tint" aria-hidden="true"/><Buddy motion={status==="recording"?"listening":status==="processing"||hintThinking?"thinking":"idle"}/></div><div className="speech mt-5 w-full max-w-[410px] text-center"><p className="mb-2 text-sm font-extrabold text-(--accent)">{question?.questionTextKo??"문제를 불러오는 중"}</p><h1 className="speech-en">{question?.questionText??"…"}</h1><button type="button" onClick={replay} disabled={!question} className="btn btn-ghost mt-4 text-sm disabled:opacity-40">🔊 다시 듣기</button></div></div>
       <div className="card relative overflow-hidden p-6 md:p-9"><span className="absolute right-5 top-5 z-10 pill">{question?.type==="PICTURE_DESCRIPTION"?"그림 보고 말하기":"영어로 말하기"}</span><div className="grid min-h-[330px] place-items-center rounded-[28px] bg-gradient-to-br from-[#fffdf5] to-[#fff1e5] p-4 md:p-6">{question?.imageUrl?<div role="img" aria-label={question.questionTextKo} className="aspect-[4/3] w-full max-w-[640px] overflow-hidden rounded-[28px] border-4 border-white bg-contain bg-center bg-no-repeat shadow-[0_10px_30px_rgba(75,75,75,.14)] ring-2 ring-[#eadfce]" style={{backgroundImage:`url("${question.imageUrl.replaceAll('"','%22')}")`}}/>:<span className="text-[110px]" aria-hidden>💬</span>}</div></div>
     </section>
     <section className="mx-auto max-w-3xl pb-12 pt-4 text-center"><h2 className={`text-2xl font-black ${status==="recording"?"text-[#e56f60]":""}`}>{message}</h2>{hint&&<p className="mx-auto mt-3 max-w-xl rounded-2xl bg-(--warn-bg) p-3 font-bold text-(--warn-text)">💡 {hint}</p>}{status==="recording"&&<Waveform/>}{(status==="processing"||status==="loading")&&<Dots/>}
@@ -64,7 +77,7 @@ export default function QuizPage() {
         <button type="button" onClick={status==="recording"?stopRecording:startRecording} disabled={status==="processing"||status==="loading"} aria-label={status==="recording"?"녹음 중지":status==="processing"||status==="loading"?"답변 처리 중":"녹음 시작"} className={`record-button relative mx-auto mt-5 grid h-32 w-32 place-items-center rounded-full border-[9px] border-white text-white transition hover:scale-105 disabled:cursor-wait disabled:bg-[#b9c6dc] ${status==="recording"?"is-recording bg-[#ff8f80] ring-[14px] ring-[#ffe5e1]":"bg-(--green) ring-[14px] ring-(--green-soft)"}`}><span className="text-4xl" aria-hidden="true">{status==="recording"?"■":status==="processing"||status==="loading"?"…":"🎙"}</span></button>
         <p className="mt-5 text-sm font-extrabold text-(--muted-2)">{status==="recording"?"말하기 완료 · 녹음 중":"눌러서 말하기"}</p>
       </>}
-      <div className="mt-6 flex justify-center gap-3"><button onClick={requestHint} disabled={!question||status==="processing"||status==="recording"} className="btn btn-ghost disabled:opacity-40">💡 힌트</button></div>
+      <div className="mt-6 flex justify-center gap-3"><button onClick={requestHint} disabled={!question||status==="processing"||status==="recording"||hintThinking} className="btn btn-ghost disabled:opacity-40">💡 힌트</button></div>
     </section>
   </div></main>;
 }
