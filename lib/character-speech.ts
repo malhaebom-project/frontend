@@ -314,40 +314,57 @@ export async function playKoreanFeedbackSpeech({
   }
 }
 
-async function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" = "default") {
+function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" = "default") {
   if (!("speechSynthesis" in window)) {
     emit({ speaking: false, level: 0, shape: "closed" });
-    throw new Error("이 브라우저는 음성 합성을 지원하지 않습니다.");
+    return Promise.reject(new Error("이 브라우저는 음성 합성을 지원하지 않습니다."));
   }
+
+  const synthesis = window.speechSynthesis;
   const generation = ++speechGeneration;
-  const immediateVoices = window.speechSynthesis.getVoices();
-  const voices = immediateVoices.length ? immediateVoices : await loadVoices();
-  if (generation !== speechGeneration) return;
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang;
-  utterance.voice = selectFriendlyVoice(voices, lang, voiceProfile);
-  utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
-  utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
-  utterance.volume = lang.startsWith("en") ? .94 : .96;
-  activeUtterance = utterance;
-  utterance.onstart = beginAnimation;
-  utterance.onboundary = event => {
-    if (activeCueTrack || (event.name && event.name !== "word")) return;
+  const voices = synthesis.getVoices();
 
-    const remainingText = text.slice(event.charIndex);
-    const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
-    const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
-    const boundaryVisemes = textToVisemes(spokenUnit);
+  return new Promise<void>((resolve, reject) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    // getVoices()가 아직 비어 있어도 기본 시스템 음성으로 즉시 말하게 합니다.
+    // voiceschanged를 기다리면 클릭의 사용자 활성화 구간을 벗어날 수 있습니다.
+    utterance.voice = voices.length ? selectFriendlyVoice(voices, lang, voiceProfile) : null;
+    utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
+    utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
+    utterance.volume = lang.startsWith("en") ? .94 : .96;
+    activeUtterance = utterance;
 
-    if (boundaryVisemes.length > 2) {
-      activeVisemes = boundaryVisemes;
-      startedAt = performance.now();
-      lastVisemeSlot = -1;
-    }
-  };
-  utterance.onend = stopCharacterSpeech;
-  utterance.onerror = stopCharacterSpeech;
-  window.speechSynthesis.speak(utterance);
+    utterance.onstart = () => {
+      if (generation !== speechGeneration || activeUtterance !== utterance) return;
+      beginAnimation();
+    };
+    utterance.onboundary = event => {
+      if (activeCueTrack || (event.name && event.name !== "word")) return;
+
+      const remainingText = text.slice(event.charIndex);
+      const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
+      const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
+      const boundaryVisemes = textToVisemes(spokenUnit);
+
+      if (boundaryVisemes.length > 2) {
+        activeVisemes = boundaryVisemes;
+        startedAt = performance.now();
+        lastVisemeSlot = -1;
+      }
+    };
+    utterance.onend = () => {
+      if (activeUtterance === utterance) stopCharacterSpeech();
+      resolve();
+    };
+    utterance.onerror = event => {
+      if (activeUtterance === utterance) stopCharacterSpeech();
+      reject(new Error(`브라우저 음성 재생 실패: ${event.error}`));
+    };
+
+    synthesis.resume();
+    synthesis.speak(utterance);
+  });
 }
 
 function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voiceProfile: "default" | "hint" = "default") {
@@ -390,20 +407,9 @@ function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voice
     .sort((a, b) => b.score - a.score)[0]?.voice ?? null;
 }
 
-function loadVoices() {
-  const immediate = window.speechSynthesis.getVoices();
-  if (immediate.length) return Promise.resolve(immediate);
-
-  return new Promise<SpeechSynthesisVoice[]>(resolve => {
-    const timeout = window.setTimeout(() => {
-      window.speechSynthesis.removeEventListener("voiceschanged", handleVoices);
-      resolve(window.speechSynthesis.getVoices());
-    }, 800);
-    function handleVoices() {
-      window.clearTimeout(timeout);
-      window.speechSynthesis.removeEventListener("voiceschanged", handleVoices);
-      resolve(window.speechSynthesis.getVoices());
-    }
-    window.speechSynthesis.addEventListener("voiceschanged", handleVoices);
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", () => {
+    window.speechSynthesis.getVoices();
   });
 }
