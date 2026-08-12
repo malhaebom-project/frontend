@@ -155,9 +155,19 @@ export function stopCharacterSpeech() {
     activeAudio = null;
   }
   if (activeUtterance) {
+    // cancel()이 발생시키는 이전 utterance의 canceled 오류가 새 재생
+    // Promise까지 전파되지 않도록 핸들러를 먼저 분리합니다.
+    activeUtterance.onstart = null;
+    activeUtterance.onboundary = null;
+    activeUtterance.onend = null;
+    activeUtterance.onerror = null;
     window.speechSynthesis?.cancel();
     activeUtterance = null;
   }
+  finishCharacterSpeech();
+}
+
+function finishCharacterSpeech() {
   cancelAnimationFrame(animationFrame);
   emit({ speaking: false, level: 0, shape: "closed" });
 }
@@ -321,51 +331,65 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
   const voices = synthesis.getVoices();
 
   return new Promise<void>((resolve, reject) => {
-    if (generation !== speechGeneration) {
-      resolve();
-      return;
+    function startAttempt(retriesRemaining: number) {
+      if (generation !== speechGeneration) {
+        resolve();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      // 음성 목록이 아직 비어 있으면 운영체제의 기본 영어 음성을 사용합니다.
+      // voiceschanged를 기다리지 않아 클릭 권한이 유지됩니다.
+      utterance.voice = voiceProfile === "system" || !voices.length
+        ? null
+        : selectFriendlyVoice(voices, lang, voiceProfile);
+      utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
+      utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
+      utterance.volume = lang.startsWith("en") ? .94 : .96;
+      activeUtterance = utterance;
+
+      utterance.onstart = () => {
+        if (generation === speechGeneration && activeUtterance === utterance) beginAnimation();
+      };
+      utterance.onboundary = event => {
+        if (activeCueTrack || (event.name && event.name !== "word")) return;
+
+        const remainingText = text.slice(event.charIndex);
+        const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
+        const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
+        const boundaryVisemes = textToVisemes(spokenUnit);
+
+        if (boundaryVisemes.length > 2) {
+          activeVisemes = boundaryVisemes;
+          startedAt = performance.now();
+          lastVisemeSlot = -1;
+        }
+      };
+      utterance.onend = () => {
+        if (activeUtterance === utterance) {
+          activeUtterance = null;
+          finishCharacterSpeech();
+        }
+        resolve();
+      };
+      utterance.onerror = event => {
+        if (activeUtterance !== utterance) return;
+        activeUtterance = null;
+        finishCharacterSpeech();
+
+        if (event.error === "canceled" && retriesRemaining > 0 && generation === speechGeneration) {
+          window.setTimeout(() => startAttempt(retriesRemaining - 1), 80);
+          return;
+        }
+        reject(new Error(event.error));
+      };
+
+      synthesis.resume();
+      synthesis.speak(utterance);
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang;
-    // 음성 목록이 아직 비어 있으면 운영체제의 기본 영어 음성을 사용합니다.
-    // voiceschanged를 기다리지 않아 클릭 권한이 유지됩니다.
-    utterance.voice = voiceProfile === "system" || !voices.length
-      ? null
-      : selectFriendlyVoice(voices, lang, voiceProfile);
-    utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
-    utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
-    utterance.volume = lang.startsWith("en") ? .94 : .96;
-    activeUtterance = utterance;
-
-    utterance.onstart = () => {
-      if (generation === speechGeneration && activeUtterance === utterance) beginAnimation();
-    };
-    utterance.onboundary = event => {
-      if (activeCueTrack || (event.name && event.name !== "word")) return;
-
-      const remainingText = text.slice(event.charIndex);
-      const nextBoundary = remainingText.search(/\s|[,.!?;:]/);
-      const spokenUnit = nextBoundary > 0 ? remainingText.slice(0, nextBoundary) : remainingText;
-      const boundaryVisemes = textToVisemes(spokenUnit);
-
-      if (boundaryVisemes.length > 2) {
-        activeVisemes = boundaryVisemes;
-        startedAt = performance.now();
-        lastVisemeSlot = -1;
-      }
-    };
-    utterance.onend = () => {
-      if (activeUtterance === utterance) stopCharacterSpeech();
-      resolve();
-    };
-    utterance.onerror = event => {
-      if (activeUtterance === utterance) stopCharacterSpeech();
-      reject(new Error(event.error));
-    };
-
-    synthesis.resume();
-    synthesis.speak(utterance);
+    startAttempt(1);
   });
 }
 
