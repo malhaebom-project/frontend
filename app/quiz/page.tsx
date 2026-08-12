@@ -6,33 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import { Buddy } from "../components";
 import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { learningState, saveSessionValue } from "@/lib/api/session";
-import type { Question, SpeechAnswer, VisemeCue } from "@/lib/api/types";
-import { playHintSpeech, playQuestionSpeech, stopCharacterSpeech } from "@/lib/character-speech";
+import type { Question, SpeechAnswer } from "@/lib/api/types";
+import { playCharacterSpeech, playHintSpeech, stopCharacterSpeech } from "@/lib/character-speech";
 
 type Status="loading"|"idle"|"recording"|"processing"|"review"|"error";
-type QuestionSpeech = { text: string; url: string | null; visemes?: VisemeCue[] };
 
 export default function QuizPage() {
   const router=useRouter(); const [question,setQuestion]=useState<Question|null>(null); const [status,setStatus]=useState<Status>("loading");
   const [message,setMessage]=useState("문제를 준비하고 있어요."); const [hint,setHint]=useState(""); const recorder=useRef<MediaRecorder|null>(null); const chunks=useRef<Blob[]>([]);
   const [draft,setDraft]=useState<SpeechAnswer|null>(null);
-  const [questionSpeech,setQuestionSpeech]=useState<QuestionSpeech|null>(null);
   const [session] = useState(() => learningState.session());
   useEffect(()=>{
     if(!session){router.replace("/setup");return;}
-    let cancelled=false;
-    api.nextQuestion(session.sessionId).then(data=>{
-      if(cancelled)return;
-      setQuestion(data);saveSessionValue("question",data);setStatus("idle");setMessage("버튼을 누르고 영어로 말해보세요.");
-      setQuestionSpeech({text:data.questionText,url:data.ttsUrl,visemes:data.ttsVisemes});
-      if(!data.ttsUrl){
-        api.questionTts(data.questionId).then(tts=>{
-          if(cancelled)return;
-          setQuestionSpeech({text:tts.text||data.questionText,url:tts.audioUrl,visemes:data.ttsVisemes});
-        }).catch(()=>undefined);
-      }
-    }).catch(e=>{if(!cancelled){setStatus("error");setMessage(errorMessage(e));}});
-    return()=>{cancelled=true;};
+    api.nextQuestion(session.sessionId).then(data=>{setQuestion(data);saveSessionValue("question",data);setStatus("idle");setMessage("버튼을 누르고 영어로 말해보세요.");}).catch(e=>{setStatus("error");setMessage(errorMessage(e));});
   },[router,session]);
   useEffect(()=>()=>stopCharacterSpeech(),[]);
 
@@ -66,11 +52,7 @@ export default function QuizPage() {
   }
   function recordAgain(){setDraft(null);setStatus("idle");setMessage("좋아요! 버튼을 누르고 다시 말해보세요.");}
   async function requestHint(){if(!session||!question)return;try{const data=await api.hint(session.sessionId,question.questionId);setHint(data.hintText);playHintSpeech(data.hintText).catch(()=>setMessage("힌트 음성을 재생하지 못했어요."));}catch(e){setMessage(errorMessage(e));}}
-  function replay(){
-    if(!question)return;
-    const speech=questionSpeech??{text:question.questionText,url:question.ttsUrl,visemes:question.ttsVisemes};
-    playQuestionSpeech({url:speech.url,text:speech.text,visemes:speech.visemes}).catch(()=>setMessage("음성을 재생하지 못했어요."));
-  }
+  function replay(){if(question)playCharacterSpeech({url:question.ttsUrl,text:question.questionText,lang:"en-US",visemes:question.ttsVisemes}).catch(()=>setMessage("음성을 재생하지 못했어요."));}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">
     <header className="flex min-h-[88px] items-center gap-5"><Link onClick={stopCharacterSpeech} href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-(--accent)">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-(--warn-bg) text-(--star-text)">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
