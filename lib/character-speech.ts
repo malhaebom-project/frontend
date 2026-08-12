@@ -20,6 +20,7 @@ export type CharacterVisemeCue = {
 
 let activeAudio: HTMLAudioElement | null = null;
 let activeUtterance: SpeechSynthesisUtterance | null = null;
+let activeSpeechOnEnd: (() => void) | null = null;
 let animationFrame = 0;
 let startedAt = 0;
 let speechGeneration = 0;
@@ -52,15 +53,25 @@ export function toSpeakableText(text: string) {
     .trim();
 }
 
-export function playHintSpeech(text: string) {
+export function playHintSpeech({
+  text,
+  url,
+  visemes,
+  onEnd,
+}: {
+  text: string;
+  url?: string | null;
+  visemes?: CharacterVisemeCue[];
+  onEnd?: () => void;
+}) {
   const koreanCharacters = text.match(/[가-힣]/g)?.length ?? 0;
   const englishCharacters = text.match(/[A-Za-z]/g)?.length ?? 0;
 
   if (koreanCharacters > englishCharacters) {
-    return playKoreanFeedbackSpeech({ text });
+    return playKoreanFeedbackSpeech({ text, fallbackUrl: url, fallbackVisemes: visemes, onEnd });
   }
 
-  return playCharacterSpeech({ text, lang: "en-US", browserVoiceProfile: "hint" });
+  return playCharacterSpeech({ url, text, lang: "en-US", visemes, browserVoiceProfile: "hint", onEnd });
 }
 
 function emit(detail: CharacterSpeechEventDetail) {
@@ -148,6 +159,8 @@ function animate() {
 }
 
 export function stopCharacterSpeech() {
+  const onEnd = activeSpeechOnEnd;
+  activeSpeechOnEnd = null;
   speechGeneration += 1;
   if (activeAudio) {
     activeAudio.pause();
@@ -160,6 +173,7 @@ export function stopCharacterSpeech() {
   }
   cancelAnimationFrame(animationFrame);
   emit({ speaking: false, level: 0, shape: "closed" });
+  onEnd?.();
 }
 
 function beginAnimation() {
@@ -177,14 +191,17 @@ export function playCharacterSpeech({
   lang = "en-US",
   visemes,
   browserVoiceProfile = "default",
+  onEnd,
 }: {
   url?: string | null;
   text: string;
   lang?: string;
   visemes?: CharacterVisemeCue[];
   browserVoiceProfile?: "default" | "hint";
+  onEnd?: () => void;
 }) {
   stopCharacterSpeech();
+  activeSpeechOnEnd = onEnd ?? null;
   const spokenText = toSpeakableText(text);
   activeVisemes = textToVisemes(spokenText);
   activeCueTrack = normalizeCueTrack(visemes);
@@ -223,10 +240,12 @@ export async function playKoreanFeedbackSpeech({
   text,
   fallbackUrl,
   fallbackVisemes,
+  onEnd,
 }: {
   text: string;
   fallbackUrl?: string | null;
   fallbackVisemes?: CharacterVisemeCue[];
+  onEnd?: () => void;
 }) {
   const spokenText = toSpeakableText(text);
   // Backend or demo-provided audio is authoritative and can start directly
@@ -239,6 +258,7 @@ export async function playKoreanFeedbackSpeech({
       text: spokenText,
       lang: "ko-KR",
       visemes: fallbackVisemes,
+      onEnd,
     });
   }
 
@@ -279,6 +299,7 @@ export async function playKoreanFeedbackSpeech({
       text: spokenText,
       lang: "ko-KR",
       visemes: speech.visemes,
+      onEnd,
     });
   } catch {
     return playCharacterSpeech({
@@ -286,6 +307,7 @@ export async function playKoreanFeedbackSpeech({
       text: spokenText,
       lang: "ko-KR",
       visemes: fallbackVisemes,
+      onEnd,
     });
   }
 }
@@ -306,7 +328,7 @@ async function speakWithBrowser(text: string, lang: string, voiceProfile: "defau
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
   utterance.voice = selectFriendlyVoice(voices, lang, voiceProfile);
-  utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
+  utterance.rate = voiceProfile === "hint" ? .9 : lang.startsWith("en") ? .9 : .92;
   utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
   utterance.volume = lang.startsWith("en") ? .94 : .96;
   activeUtterance = utterance;
