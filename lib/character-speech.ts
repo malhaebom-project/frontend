@@ -365,7 +365,9 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
           window.setTimeout(() => startAttempt(retriesRemaining - 1), 120);
           return;
         }
-        reject(new Error("start-timeout"));
+        reject(new Error(
+          `start-timeout:paused=${synthesis.paused},pending=${synthesis.pending},speaking=${synthesis.speaking}`,
+        ));
       }, 1500);
 
       utterance.onstart = () => {
@@ -408,8 +410,10 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
         reject(new Error(event.error));
       };
 
-      synthesis.resume();
       synthesis.speak(utterance);
+      // Chrome에서 빈 대기열에 먼저 resume()을 호출하면 이후 추가된
+      // utterance가 paused 상태에 남을 수 있어 speak() 다음에 해제합니다.
+      synthesis.resume();
     }
 
     startAttempt(1);
