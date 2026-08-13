@@ -51,7 +51,7 @@ export default function RecordsPage() {
       </section>
       <section className="card mt-6 space-y-4 overflow-hidden p-7 shadow-sm"><div className="skeleton h-4 w-20"/><div className="skeleton h-14 w-full"/><div className="skeleton h-14 w-full"/><div className="skeleton h-14 w-full"/></section></div>
     </div>:<>
-      <ParentPraise childName={child?.nickname??"아이"} correctRate={stats?.averageCorrectRate??0}/>
+      {stats&&<ParentGuide childName={child?.nickname??"아이"} totalSessionCount={stats.totalSessionCount} correctRate={stats.averageCorrectRate}/>}
       <section className="mt-8 grid gap-4 md:grid-cols-4">{[["📅",`${stats?.totalSessionCount??0}회`,"총 학습 횟수","soft-blue"],["◎",`${stats?.averageCorrectRate??0}%`,"평균 정답률","soft-mint"],["🔥",`${stats?.consecutiveStudyDays??0}일`,"연속 학습","soft-coral"],["⏱",`${Math.round((stats?.totalStudySeconds??0)/60)}분`,"총 학습 시간","soft-yellow"]].map(([icon,value,label,tone])=><div key={label} className="card flex items-center gap-4 p-5 shadow-sm"><span className={`stat-icon ${tone}`} aria-hidden="true">{icon}</span><div><strong className="text-2xl">{value}</strong><p className="m-0 mt-1 text-xs font-bold text-(--muted-2)">{label}</p></div></div>)}</section>
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="card p-7 shadow-sm"><p className="m-0 text-sm font-extrabold text-(--muted-2)">주제별 학습</p><h2 className="mb-6 mt-1 text-xl font-black">정답률</h2><div className="space-y-5">{stats?.topicStatistics.map(topic=><div key={topic.topicName}><div className="mb-2 flex justify-between text-sm font-extrabold"><span>{topic.topicName} · {topic.questionCount}문제</span><span>{topic.correctRate}%</span></div><div className="progress"><span style={{width:`${topic.correctRate}%`}}/></div></div>)}{!stats?.topicStatistics.length&&<p className="text-(--muted-2)">아직 주제별 통계가 없어요.</p>}</div></div>
         <div className="card p-7 shadow-sm"><p className="m-0 text-sm font-extrabold text-(--muted-2)">다시 연습할 표현</p><h2 className="mb-5 mt-1 text-xl font-black">최근 오답</h2>{wrong[0]?<div className="rounded-2xl bg-[#fff8df] p-5"><p className="m-0 text-sm text-(--muted-2)">{wrong[0].questionText}</p><p className="mb-1 mt-3 text-sm line-through">{wrong[0].answerText}</p><p className="m-0 text-lg font-black">{wrong[0].modelAnswer}</p></div>:<p className="rounded-2xl bg-(--success-bg) p-5 font-bold text-(--success-text)">아직 저장된 오답이 없어요!</p>}</div>
@@ -61,14 +61,14 @@ export default function RecordsPage() {
   </main>;
 }
 
-function ParentPraise({childName,correctRate}:{childName:string;correctRate:number}) {
-  const message=correctRate>=90
-    ? `${childName}가 아주 자신 있게 말하고 있어요. “꾸준히 연습한 게 정말 멋져!”라고 칭찬해 주세요.`
-    : correctRate>=80
-      ? `${childName}의 영어 자신감이 쑥쑥 자라고 있어요. “오늘도 끝까지 해낸 게 대단해!”라고 말해 주세요.`
-      : `${childName}가 자기 속도로 한 걸음씩 성장하고 있어요. 결과보다 용기 내어 말한 과정을 칭찬해 주세요.`;
-  return <section className="mt-8 flex flex-col gap-5 rounded-[28px] border-2 border-[#cdeebc] bg-gradient-to-r from-[#f4ffec] to-[#fffbe8] p-6 shadow-[0_6px_0_#d9edc9] sm:flex-row sm:items-center">
-    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-4xl shadow-sm" aria-hidden="true">👏</span>
-    <div><p className="m-0 text-sm font-extrabold uppercase tracking-[.08em] text-(--green-dark)">오늘의 보호자 칭찬 팁</p><h2 className="mb-2 mt-1 text-2xl font-black">아이에게 칭찬해 주세요!</h2><p className="m-0 font-semibold leading-7 text-(--muted-2)">{message}</p></div>
+function ParentGuide({childName,totalSessionCount,correctRate}:{childName:string;totalSessionCount:number;correctRate:number}) {
+  const guide=totalSessionCount===0
+    ? {icon:"🌱",eyebrow:"첫 학습 안내",title:"첫 학습을 함께 시작해 보세요!",message:`${childName}가 부담 없이 첫 문장을 말할 수 있도록 옆에서 응원해 주세요. 짧게 한 문제부터 시작해도 충분해요.`,theme:"border-[#cfe4ff] from-[#f2f8ff] to-[#f6fffb] shadow-[0_6px_0_#dceaf7]",accent:"text-[#3b78b8]"}
+    : correctRate<80
+      ? {icon:"💪",eyebrow:"도전 과정 응원",title:"노력한 과정을 응원해 주세요!",message:`${childName}가 틀릴 걱정 없이 영어로 말해본 용기가 가장 큰 성장이에요. “끝까지 도전해서 멋져!”라고 말해 주세요.`,theme:"border-[#f4df9a] from-[#fffbea] to-[#fff5e9] shadow-[0_6px_0_#f2e7bd]",accent:"text-[#9a6a13]"}
+      : {icon:"👏",eyebrow:"오늘의 보호자 칭찬 팁",title:"아이에게 칭찬해 주세요!",message:`${childName}의 영어 자신감이 쑥쑥 자라고 있어요. “오늘도 끝까지 해낸 게 대단해!”라고 말해 주세요.`,theme:"border-[#cdeebc] from-[#f4ffec] to-[#fffbe8] shadow-[0_6px_0_#d9edc9]",accent:"text-(--green-dark)"};
+  return <section className={`mt-8 flex flex-col gap-5 rounded-[28px] border-2 bg-gradient-to-r p-6 sm:flex-row sm:items-center ${guide.theme}`}>
+    <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white text-4xl shadow-sm" aria-hidden="true">{guide.icon}</span>
+    <div><p className={`m-0 text-sm font-extrabold uppercase tracking-[.08em] ${guide.accent}`}>{guide.eyebrow}</p><h2 className="mb-2 mt-1 text-2xl font-black">{guide.title}</h2><p className="m-0 font-semibold leading-7 text-(--muted-2)">{guide.message}</p></div>
   </section>;
 }
