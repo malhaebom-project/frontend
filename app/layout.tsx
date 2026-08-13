@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ButtonSoundProvider } from "./button-sound-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body><ButtonSoundProvider/>{children}</body>
     </html>
   );
 }
