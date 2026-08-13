@@ -75,6 +75,31 @@ function writeState(state:DemoState){sessionStorage.setItem(STATE_KEY,JSON.strin
 function jsonBody(init:RequestInit){try{return init.body?JSON.parse(String(init.body)):{};}catch{return {};}}
 function wait(){return new Promise(resolve=>setTimeout(resolve,350));}
 
+function demoStatistics(): Statistics {
+  return {
+    totalSessionCount:12,totalStudySeconds:4200,averageCorrectRate:82.5,consecutiveStudyDays:3,
+    topicStatistics:[{topicName:"동물",questionCount:20,correctRate:90},{topicName:"음식",questionCount:18,correctRate:83.3},{topicName:"일상생활",questionCount:15,correctRate:73.3}],
+  };
+}
+
+function demoWrongAnswers(): WrongAnswer[] {
+  return [{
+    answerId:2002,questionId:502,questionText:"What color is the apple?",imageUrl:null,answerText:"It is red.",modelAnswer:"It is a red apple.",feedbackText:"관사 a를 함께 사용해 보세요.",answeredAt:today,
+  }];
+}
+
+export async function demoRecordsPreview(preferredChildId?:number) {
+  await wait();
+  const state=readState();
+  const child=state.children.find(item=>item.childId===preferredChildId)??state.children[0]??null;
+  return {
+    child,
+    history:{content:demoHistory(),page:0,size:10,totalElements:3,totalPages:1} satisfies LearningHistory,
+    statistics:demoStatistics(),
+    wrongAnswers:demoWrongAnswers(),
+  };
+}
+
 export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   await wait();
   const method=init.method??"GET";const state=readState();
@@ -180,13 +205,8 @@ export async function demoRequest<T>(path:string,init:RequestInit):Promise<T>{
   if(path.startsWith("/children/")&&path.includes("/learning-history")){
     return {content:demoHistory(),page:0,size:10,totalElements:3,totalPages:1} satisfies LearningHistory as T;
   }
-  if(path.endsWith("/statistics"))return {
-    totalSessionCount:12,totalStudySeconds:4200,averageCorrectRate:82.5,consecutiveStudyDays:3,
-    topicStatistics:[{topicName:"동물",questionCount:20,correctRate:90},{topicName:"음식",questionCount:18,correctRate:83.3},{topicName:"일상생활",questionCount:15,correctRate:73.3}],
-  } satisfies Statistics as T;
-  if(path.endsWith("/wrong-answers"))return [{
-    answerId:2002,questionId:502,questionText:"What color is the apple?",imageUrl:null,answerText:"It is red.",modelAnswer:"It is a red apple.",feedbackText:"관사 a를 함께 사용해 보세요.",answeredAt:today,
-  }] satisfies WrongAnswer[] as T;
+  if(path.endsWith("/statistics"))return demoStatistics() as T;
+  if(path.endsWith("/wrong-answers"))return demoWrongAnswers() as T;
   if(path.startsWith("/admin/questions"))return {content:[],page:0,size:10,totalElements:0,totalPages:0} satisfies PageData<AdminQuestion> as T;
   if(path==="/admin/files/images")return {fileUrl:"/window.svg"} as T;
   throw new Error(`데모 API에 정의되지 않은 요청입니다: ${method} ${path}`);
