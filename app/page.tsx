@@ -8,11 +8,15 @@ export default function HomePage() {
       <div className="container">
         <Topbar />
         <section className="home-hero grid items-center gap-12 pb-16 lg:grid-cols-[1.02fr_.98fr]">
-          <div className="relative z-10">
-            <span className="pill home-kicker mb-7">★ 매일 10분, 영어 자신감 한 칸</span>
+          <div className="home-copy relative z-10">
+            <span className="pill home-kicker mb-6">★ 매일 10분, 영어 자신감 한 칸</span>
             <h1 className="display">말할수록 자라는<br/><span className="home-accent">나의 영어 자신감</span></h1>
-            <p className="subtitle mt-6 max-w-xl">봄이의 질문을 듣고 영어로 대답해 보세요.<br className="hidden sm:block"/> 아이의 속도에 맞춘 칭찬과 피드백이 매일 이어져요.</p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="home-brand-signature" aria-label="말해봄">
+              <span className="home-brand-signature-mark" aria-hidden="true"><i/><i/><i/></span>
+              <strong>MALHAEBOM</strong>
+            </div>
+            <p className="subtitle mt-5 max-w-xl">봄이 선생님의 질문을 듣고 영어로 대답해 보세요.<br className="hidden sm:block"/> 아이의 속도에 맞춘 칭찬과 피드백이 매일 이어져요.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/profiles" className="btn btn-primary btn-large">무료로 학습 시작하기</Link>
               <Link href="/records" className="btn btn-secondary btn-large">학습 기록 보기</Link>
             </div>
