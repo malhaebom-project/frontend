@@ -138,6 +138,11 @@ a { color: inherit; text-decoration: none; }
   inset:0;
   background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(244,255,249,.24) 64%,rgba(255,248,224,.45));
 }
+.quiz-media-card { overflow:hidden; }
+.quiz-type-row { display:flex; min-height:42px; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; padding-inline:4px; }
+.quiz-type-label { color:var(--muted-2); font-size:12px; font-weight:900; letter-spacing:.08em; }
+.quiz-type-badge { display:inline-flex; align-items:center; gap:8px; padding:9px 13px; border:1px solid #dce7f7; border-radius:999px; color:#40516e; background:#f7faff; font-size:14px; font-weight:900; white-space:nowrap; }
+.quiz-type-badge > span { display:grid; width:23px; height:23px; place-items:center; border-radius:8px; color:var(--accent-dark); background:#e7f0ff; font-size:12px; }
 .quiz-character-scene .buddy {
   z-index:1;
   flex:0 0 auto;

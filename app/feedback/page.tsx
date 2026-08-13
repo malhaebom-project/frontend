@@ -20,7 +20,7 @@ export default function FeedbackPage() {
   useEffect(()=>{if(hydrated&&!feedback)router.replace("/quiz");},[router,hydrated,feedback]);
   useEffect(()=>()=>stopCharacterSpeech(),[]);
   if(!feedback)return null;
-  const correct=feedback.result==="CORRECT"; const answerId=feedback.answerId; const canRetry=feedback.canRetry; const remainingAttempts=feedback.remainingAttempts; const question=learningState.question(); const session=learningState.session(); const isLast=question&&question.questionIndex>=question.totalQuestionCount; const starsBefore=Math.max(0,(question?.questionIndex??1)-1); const starTotal=starsBefore+(correct?1:0);
+  const correct=feedback.result==="CORRECT"; const answerId=feedback.answerId; const canRetry=feedback.canRetry; const remainingAttempts=feedback.remainingAttempts; const question=learningState.question(); const session=learningState.session(); const child=learningState.child(); const isLast=question&&question.questionIndex>=question.totalQuestionCount; const starsBefore=Math.max(0,(question?.questionIndex??1)-1); const starTotal=starsBefore+(correct?1:0);
   async function next(){
     if(!session)return;stopCharacterSpeech();setLoading(true);setError("");
     try {
@@ -39,7 +39,7 @@ export default function FeedbackPage() {
     try {const data=await api.explanation(session.sessionId,question.questionId,answerId);setExplanation({text:data.explanationText,url:data.explanationTtsUrl,visemes:data.explanationTtsVisemes});await playKoreanFeedbackSpeech({fallbackUrl:data.explanationTtsUrl,text:data.explanationText,fallbackVisemes:data.explanationTtsVisemes});}
     catch(e){setError(errorMessage(e));}finally{setToolLoading(false);}
   }
-  return <main className="page-shell">{correct&&question&&<StarReward answerId={answerId} before={starsBefore} after={starTotal} questionIndex={question.questionIndex} totalQuestions={question.totalQuestionCount}/>}<div className="container"><header className="topbar"><Brand/><span className={`pill ${correct?"bg-(--warn-bg) text-(--star-text)":"bg-(--accent-bg-selected) text-(--accent-dark)"}`}>{correct?`★ ${starTotal}개`:"한 번 더 도전!"}</span></header>
+  return <main className="page-shell">{correct&&question&&<StarReward answerId={answerId} before={starsBefore} after={starTotal} questionIndex={question.questionIndex} totalQuestions={question.totalQuestionCount} nickname={child?.nickname}/>}<div className="container"><header className="topbar"><Brand/><span className={`pill ${correct?"bg-(--warn-bg) text-(--star-text)":"bg-(--accent-bg-selected) text-(--accent-dark)"}`}>{correct?`★ ${starTotal}개`:"한 번 더 도전!"}</span></header>
     <section className="mx-auto grid max-w-5xl items-center gap-8 py-10 lg:grid-cols-[.7fr_1.3fr]"><div className="relative text-center"><Buddy className="mx-auto" motion={correct?"correct":"feedback"}/><div className="mt-3"><span className={`rounded-full px-5 py-2 font-black ${correct?"bg-(--success-bg) text-(--success-text)":"bg-(--warn-bg) text-(--star-text)"}`}>정확도 {feedback.score}%</span></div></div>
       <div><p className="eyebrow">{correct?"Amazing work!":"Keep going!"}</p><h1 className="title mt-2">{correct?"Great job! 🎉":"좋은 시도예요!"}</h1><p className="subtitle mt-3">{feedback.feedbackText}</p>
         {error&&<div className="mt-4 rounded-2xl bg-(--warn-bg) p-4 font-bold text-(--warn-text)">{error}</div>}
@@ -53,9 +53,10 @@ export default function FeedbackPage() {
 
 type RewardGaugeStyle=CSSProperties&{"--gauge-before":string;"--gauge-after":string;"--ring-before":string;"--ring-after":string};
 
-function StarReward({answerId,before,after,questionIndex,totalQuestions}:{answerId:number;before:number;after:number;questionIndex:number;totalQuestions:number}) {
+function StarReward({answerId,before,after,questionIndex,totalQuestions,nickname}:{answerId:number;before:number;after:number;questionIndex:number;totalQuestions:number;nickname?:string}) {
   const [visible,setVisible]=useState(true); const [count,setCount]=useState(before); const [celebrate,setCelebrate]=useState(false);
   const beforePercent=Math.round(Math.max(0,questionIndex-1)/totalQuestions*100); const afterPercent=Math.round(questionIndex/totalQuestions*100);
+  const praise=rewardPraise(questionIndex,totalQuestions,nickname);
   const gaugeStyle={"--gauge-before":`${beforePercent}%`,"--gauge-after":`${afterPercent}%`,"--ring-before":`${beforePercent*3.6}deg`,"--ring-after":`${afterPercent*3.6}deg`} as RewardGaugeStyle;
   useEffect(()=>{
     const key=`malhaebom.reward.v5.${answerId}`;
@@ -71,6 +72,17 @@ function StarReward({answerId,before,after,questionIndex,totalQuestions}:{answer
     <div className="star-charge-ring" aria-hidden><div className="star-charge-core"/></div>
     <div className="star-reward-badge"><span className="star-reward-star">★</span><strong>{count}</strong><small>STARS</small></div>
     <div className="star-charge-meter" aria-hidden><span/><div><b>LEARNING POWER</b><em>{afterPercent}%</em></div></div>
-    <div className="star-reward-praise"><strong>{afterPercent}%까지 충전!</strong><span>정답을 맞혀 별이 하나 늘었어요</span></div>
+    <div className="star-reward-praise"><strong>{praise.title}</strong><span>{praise.detail}</span></div>
   </div>;
+}
+
+function rewardPraise(questionIndex:number,totalQuestions:number,nickname?:string){
+  const name=nickname?.trim();
+  const prefix=name?`${name}, `:"";
+  const ratio=questionIndex/Math.max(1,totalQuestions);
+  if(questionIndex===1)return {title:`${prefix}첫 별을 얻었어요!`,detail:"시작부터 또박또박 정말 잘했어요"};
+  if(ratio>=1)return {title:`${prefix}끝까지 해냈어요!`,detail:"오늘의 영어 자신감이 한 뼘 더 자랐어요"};
+  if(ratio>=.7)return {title:`${prefix}조금만 더 힘내요!`,detail:"멋진 대답으로 별이 하나 더 늘었어요"};
+  if(ratio>=.4)return {title:`${prefix}영어 자신감이 쑥쑥!`,detail:"지금처럼 자신 있게 말하면 돼요"};
+  return {title:`${prefix}정말 멋진 대답이에요!`,detail:"봄이 선생님도 힘껏 박수 치고 있어요"};
 }
