@@ -32,16 +32,18 @@ const koreanFeedbackCache = new Map<string, {
   visemes: CharacterVisemeCue[];
 }>();
 
-const preferredVoiceNames = [
-  "samantha", "ava", "allison", "susan", "zira", "aria", "jenny",
-  "google us english", "google uk english female", "karen", "moira",
-  "yuna", "sora", "sunhi", "google 한국의",
-];
+const preferredVoiceNamesByLanguage: Record<string, string[]> = {
+  en: [
+    "samantha", "ava", "allison", "susan", "zira", "aria", "jenny",
+    "google us english", "google uk english female", "karen", "moira",
+  ],
+  ko: ["yuna", "sora", "sunhi", "google 한국의", "google 한국어", "heami"],
+};
 const avoidedVoiceNames = [
   "alex", "daniel", "fred", "ralph", "bruce", "lee", "david",
   "mark", "guy", "george", "male", "남성", "grandma", "grandpa",
 ];
-const hintVoiceNames = ["google us english", "google uk english female"];
+const selectedVoiceUris = new Map<string, string>();
 
 export function toSpeakableText(text: string) {
   return text
@@ -60,7 +62,7 @@ export function playHintSpeech(text: string) {
     return playKoreanFeedbackSpeech({ text });
   }
 
-  return playCharacterSpeech({ text, lang: "en-US", browserVoiceProfile: "hint" });
+  return playCharacterSpeech({ text, lang: "en-US" });
 }
 
 function emit(detail: CharacterSpeechEventDetail) {
@@ -186,13 +188,11 @@ export function playCharacterSpeech({
   text,
   lang = "en-US",
   visemes,
-  browserVoiceProfile = "default",
 }: {
   url?: string | null;
   text: string;
   lang?: string;
   visemes?: CharacterVisemeCue[];
-  browserVoiceProfile?: "default" | "hint" | "system";
 }) {
   stopCharacterSpeech();
   const spokenText = toSpeakableText(text);
@@ -218,15 +218,15 @@ export function playCharacterSpeech({
     audio.addEventListener("ended", stopCharacterSpeech, { once: true });
     audio.addEventListener("error", () => {
       activeCueTrack = null;
-      void speakWithBrowser(spokenText, lang, browserVoiceProfile);
+      void speakWithBrowser(spokenText, lang);
     }, { once: true });
     return audio.play().catch(() => {
       activeCueTrack = null;
-      return speakWithBrowser(spokenText, lang, browserVoiceProfile);
+      return speakWithBrowser(spokenText, lang);
     });
   }
 
-  return speakWithBrowser(spokenText, lang, browserVoiceProfile);
+  return speakWithBrowser(spokenText, lang);
 }
 
 /**
@@ -245,7 +245,6 @@ export function playBrowserQuestionSpeech({
     text,
     lang: "en-US",
     visemes,
-    browserVoiceProfile: "system",
   });
 }
 
@@ -320,7 +319,7 @@ export async function playKoreanFeedbackSpeech({
   }
 }
 
-function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | "hint" | "system" = "default") {
+function speakWithBrowser(text: string, lang: string) {
   if (!("speechSynthesis" in window)) {
     emit({ speaking: false, level: 0, shape: "closed" });
     return Promise.reject(new Error("이 브라우저는 음성 합성을 지원하지 않습니다."));
@@ -339,13 +338,9 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
       const utterance = new SpeechSynthesisUtterance(text);
       const voices = synthesis.getVoices();
       utterance.lang = lang;
-      // 문제 음성은 브라우저 목록에서 실제로 설치된 로컬 영어 음성을
-      // 우선 사용합니다. 로컬 음성이 없을 때만 시스템 기본값을 사용합니다.
-      utterance.voice = voiceProfile === "system"
-        ? selectSystemVoice(voices, lang)
-        : voices.length ? selectFriendlyVoice(voices, lang, voiceProfile) : null;
-      utterance.rate = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? .9 : .92;
-      utterance.pitch = voiceProfile === "hint" ? 1 : lang.startsWith("en") ? 1.28 : 1.06;
+      utterance.voice = voices.length ? selectFriendlyVoice(voices, lang) : null;
+      utterance.rate = .9;
+      utterance.pitch = lang.startsWith("en") ? 1.08 : 1.04;
       utterance.volume = lang.startsWith("en") ? .94 : .96;
       activeUtterance = utterance;
       let started = false;
@@ -420,53 +415,43 @@ function speakWithBrowser(text: string, lang: string, voiceProfile: "default" | 
   });
 }
 
-function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string, voiceProfile: "default" | "hint" | "system" = "default") {
-  const requested = process.env.NEXT_PUBLIC_TTS_VOICE_NAME?.toLowerCase();
-  if (requested) {
-    const exact = voices.find(voice => voice.name.toLowerCase().includes(requested));
-    if (exact) return exact;
-  }
-
+function selectFriendlyVoice(voices: SpeechSynthesisVoice[], lang: string) {
   const language = lang.toLowerCase().split("-")[0];
   const matching = voices.filter(voice => voice.lang.toLowerCase().startsWith(language));
   const candidates = matching.length ? matching : voices;
+  const cachedVoiceUri = selectedVoiceUris.get(language);
+  const cachedVoice = cachedVoiceUri
+    ? candidates.find(voice => voice.voiceURI === cachedVoiceUri)
+    : null;
+  if (cachedVoice) return cachedVoice;
 
-  if (voiceProfile === "hint") {
-    const matchedHintVoice = hintVoiceNames
-      .map(name => candidates.find(voice => `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(name)))
-      .find(Boolean);
-    if (matchedHintVoice) return matchedHintVoice;
+  const requested = process.env.NEXT_PUBLIC_TTS_VOICE_NAME?.toLowerCase();
+  if (requested) {
+    const exact = candidates.find(voice => voice.name.toLowerCase().includes(requested));
+    if (exact) {
+      selectedVoiceUris.set(language, exact.voiceURI);
+      return exact;
+    }
   }
 
-  if (language === "ko") {
-    const yuna = candidates.find(voice => (
-      `${voice.name} ${voice.voiceURI}`.toLowerCase().includes("yuna")
-    ));
-    if (yuna) return yuna;
-  }
+  const preferredVoiceNames = preferredVoiceNamesByLanguage[language] ?? [];
 
-  return candidates
+  const selected = candidates
     .map(voice => {
       const name = `${voice.name} ${voice.voiceURI}`.toLowerCase();
-      let score = voice.localService ? 2 : 0;
+      let score = voice.localService ? 4 : 0;
 
       const preferredIndex = preferredVoiceNames.findIndex(item => name.includes(item));
-      if (preferredIndex >= 0) score += 100 - preferredIndex;
-      if (avoidedVoiceNames.some(item => name.includes(item))) score -= 100;
-      if (name.includes("female") || name.includes("woman") || name.includes("여성")) score += 30;
+      if (preferredIndex >= 0) score += 200 - preferredIndex;
+      if (avoidedVoiceNames.some(item => name.includes(item))) score -= 300;
+      if (name.includes("female") || name.includes("woman") || name.includes("여성")) score += 20;
       if (name.includes("natural") || name.includes("neural") || name.includes("premium")) score += 12;
+      if (voice.default) score += 2;
       return { voice, score };
     })
     .sort((a, b) => b.score - a.score)[0]?.voice ?? null;
-}
-
-function selectSystemVoice(voices: SpeechSynthesisVoice[], lang: string) {
-  const language = lang.toLowerCase().split("-")[0];
-  const matching = voices.filter(voice => voice.lang.toLowerCase().startsWith(language));
-  return matching.find(voice => voice.localService)
-    ?? matching.find(voice => voice.default)
-    ?? matching[0]
-    ?? null;
+  if (selected) selectedVoiceUris.set(language, selected.voiceURI);
+  return selected;
 }
 
 if (typeof window !== "undefined" && "speechSynthesis" in window) {
