@@ -48,6 +48,7 @@ export default function QuizPage() {
     setStatus("processing");setMessage("답변을 채점하고 있어요.");
     try {
       const feedback=await api.submitAnswer(session.sessionId,question.sessionQuestionId,draft.speechAnswerId,draft.transcript);
+      if(feedback.result==="CORRECT")saveSessionValue("session",{...session,correctCount:(session.correctCount??0)+1});
       saveSessionValue("feedback",feedback);router.push("/feedback");
     } catch(e){setStatus("error");setMessage(errorMessage(e));}
   }

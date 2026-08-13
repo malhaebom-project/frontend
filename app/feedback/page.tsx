@@ -20,7 +20,7 @@ export default function FeedbackPage() {
   useEffect(()=>{if(hydrated&&!feedback)router.replace("/quiz");},[router,hydrated,feedback]);
   useEffect(()=>()=>stopCharacterSpeech(),[]);
   if(!feedback)return null;
-  const correct=feedback.result==="CORRECT"; const answerId=feedback.answerId; const canRetry=feedback.canRetry; const remainingAttempts=feedback.remainingAttempts; const question=learningState.question(); const session=learningState.session(); const child=learningState.child(); const isLast=question&&question.questionIndex>=question.totalQuestionCount; const starsBefore=Math.max(0,(question?.questionIndex??1)-1); const starTotal=starsBefore+(correct?1:0);
+  const correct=feedback.result==="CORRECT"; const answerId=feedback.answerId; const canRetry=feedback.canRetry; const remainingAttempts=feedback.remainingAttempts; const question=learningState.question(); const session=learningState.session(); const child=learningState.child(); const isLast=question&&question.questionIndex>=question.totalQuestionCount; const starTotal=session?.correctCount??(correct?1:0); const starsBefore=Math.max(0,starTotal-(correct?1:0));
   async function next(){
     if(!session)return;stopCharacterSpeech();setLoading(true);setError("");
     try {
@@ -51,35 +51,42 @@ export default function FeedbackPage() {
   </div></main>;
 }
 
-type RewardGaugeStyle=CSSProperties&{"--gauge-before":string;"--gauge-after":string;"--ring-before":string;"--ring-after":string};
+type RewardGaugeStyle=CSSProperties&{"--gauge-before-scale":string;"--gauge-after-scale":string};
 
 function StarReward({answerId,before,after,questionIndex,totalQuestions,nickname}:{answerId:number;before:number;after:number;questionIndex:number;totalQuestions:number;nickname?:string}) {
   const [visible,setVisible]=useState(true); const [count,setCount]=useState(before); const [celebrate,setCelebrate]=useState(false);
   const beforePercent=Math.round(Math.max(0,questionIndex-1)/totalQuestions*100); const afterPercent=Math.round(questionIndex/totalQuestions*100);
-  const praise=rewardPraise(questionIndex,totalQuestions,nickname);
-  const gaugeStyle={"--gauge-before":`${beforePercent}%`,"--gauge-after":`${afterPercent}%`,"--ring-before":`${beforePercent*3.6}deg`,"--ring-after":`${afterPercent*3.6}deg`} as RewardGaugeStyle;
+  const completedAllStars=questionIndex>=totalQuestions&&after>=totalQuestions;
+  const praise=rewardPraise(questionIndex,totalQuestions,nickname,completedAllStars);
+  const gaugeStyle={"--gauge-before-scale":String(beforePercent/100),"--gauge-after-scale":String(afterPercent/100)} as RewardGaugeStyle;
   useEffect(()=>{
-    const key=`malhaebom.reward.v5.${answerId}`;
+    const duration=completedAllStars?5200:4100;
+    const key=`malhaebom.reward.v7.${answerId}`;
     if(sessionStorage.getItem(key)){const duplicateTimer=window.setTimeout(()=>setVisible(false),0);return()=>window.clearTimeout(duplicateTimer);}
-    const countTimer=window.setTimeout(()=>{setCount(after);setCelebrate(true);},1550);
-    const celebrateTimer=window.setTimeout(()=>setCelebrate(false),2750);
-    const hideTimer=window.setTimeout(()=>{sessionStorage.setItem(key,"shown");setVisible(false);},3600);
+    const countTimer=window.setTimeout(()=>{setCount(after);setCelebrate(true);},1050);
+    const celebrateTimer=window.setTimeout(()=>setCelebrate(false),completedAllStars?3400:2350);
+    const hideTimer=window.setTimeout(()=>{sessionStorage.setItem(key,"shown");setVisible(false);},duration);
     return()=>{window.clearTimeout(countTimer);window.clearTimeout(celebrateTimer);window.clearTimeout(hideTimer);};
-  },[answerId,after]);
+  },[answerId,after,completedAllStars]);
   if(!visible)return null;
-  return <div className={`star-reward-layer ${celebrate?"is-celebrating":""}`} style={gaugeStyle} aria-live="polite" aria-label={`별 ${after}개 획득, 학습 진행률 ${afterPercent}%`}>
+  return <div className={`star-reward-layer ${celebrate?"is-celebrating":""} ${completedAllStars?"is-complete":""}`} style={gaugeStyle} aria-live="polite" aria-label={completedAllStars?`모든 별 ${after}개 획득`:`별 ${after}개 획득, 학습 진행률 ${afterPercent}%`}>
+    <div className="star-reward-aurora" aria-hidden/>
+    <div className="star-reward-rays" aria-hidden/>
     <div className="star-charge-orbit" aria-hidden><i/><i/><i/></div>
-    <div className="star-charge-ring" aria-hidden><div className="star-charge-core"/></div>
-    <div className="star-reward-badge"><span className="star-reward-star">★</span><strong>{count}</strong><small>STARS</small></div>
-    <div className="star-charge-meter" aria-hidden><span/><div><b>LEARNING POWER</b><em>{afterPercent}%</em></div></div>
+    <div className="star-reward-sparkles" aria-hidden>{Array.from({length:10},(_,index)=><i key={index}/>)}</div>
+    {completedAllStars&&<div className="star-complete-confetti" aria-hidden>{Array.from({length:18},(_,index)=><i key={index}/>)}</div>}
+    <div className="star-reward-badge">{completedAllStars&&<svg className="star-reward-crown" viewBox="0 0 120 70" aria-hidden="true"><path d="M12 20 40 40 60 8l20 32 28-20-10 42H22L12 20Z"/><circle cx="12" cy="18" r="7"/><circle cx="60" cy="8" r="7"/><circle cx="108" cy="18" r="7"/></svg>}<span className="star-reward-star">★</span><div className="star-reward-count"><strong>{count}</strong><small>{completedAllStars?"ALL STARS":"MY STARS"}</small></div></div>
+    <div className="star-charge-meter" aria-hidden><div><b>오늘의 도전</b><em>{afterPercent}%</em></div><span/></div>
+    {completedAllStars&&<div className="star-complete-ribbon" aria-hidden><i/><strong>PERFECT</strong><i/></div>}
     <div className="star-reward-praise"><strong>{praise.title}</strong><span>{praise.detail}</span></div>
   </div>;
 }
 
-function rewardPraise(questionIndex:number,totalQuestions:number,nickname?:string){
+function rewardPraise(questionIndex:number,totalQuestions:number,nickname?:string,completedAllStars=false){
   const name=nickname?.trim();
   const prefix=name?`${name}, `:"";
   const ratio=questionIndex/Math.max(1,totalQuestions);
+  if(completedAllStars)return {title:`${prefix}모든 별을 모았어요!`,detail:"오늘 문제를 전부 맞혔어요 · 정말 대단해요!"};
   if(questionIndex===1)return {title:`${prefix}첫 별을 얻었어요!`,detail:"시작부터 또박또박 정말 잘했어요"};
   if(ratio>=1)return {title:`${prefix}끝까지 해냈어요!`,detail:"오늘의 영어 자신감이 한 뼘 더 자랐어요"};
   if(ratio>=.7)return {title:`${prefix}조금만 더 힘내요!`,detail:"멋진 대답으로 별이 하나 더 늘었어요"};
