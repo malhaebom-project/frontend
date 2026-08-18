@@ -8,12 +8,14 @@ import { api, ApiError, errorMessage } from "@/lib/api/client";
 import { learningState, saveSessionValue } from "@/lib/api/session";
 import type { Question, SpeechAnswer } from "@/lib/api/types";
 import { playBrowserQuestionSpeech, playHintSpeech, stopCharacterSpeech } from "@/lib/character-speech";
+import { playQuestionIntroChime } from "../button-sound-provider";
 
 type Status="loading"|"idle"|"recording"|"processing"|"review"|"error";
 
 export default function QuizPage() {
   const router=useRouter(); const [question,setQuestion]=useState<Question|null>(null); const [status,setStatus]=useState<Status>("loading");
   const [message,setMessage]=useState("문제를 준비하고 있어요."); const [hint,setHint]=useState(""); const recorder=useRef<MediaRecorder|null>(null); const chunks=useRef<Blob[]>([]);
+  const autoSpokenQuestionId=useRef<number|null>(null); const autoSpeechTimer=useRef<number|null>(null); const autoSpeechGeneration=useRef(0);
   const [hintThinking,setHintThinking]=useState(false);
   const [draft,setDraft]=useState<SpeechAnswer|null>(null);
   const [session] = useState(() => learningState.session());
@@ -21,10 +23,42 @@ export default function QuizPage() {
     if(!session){router.replace("/setup");return;}
     api.nextQuestion(session.sessionId).then(data=>{setQuestion(data);saveSessionValue("question",data);setStatus("idle");setMessage("버튼을 누르고 영어로 말해보세요.");}).catch(e=>{setStatus("error");setMessage(errorMessage(e));});
   },[router,session]);
-  useEffect(()=>()=>stopCharacterSpeech(),[]);
+  useEffect(()=>{
+    if(!question||autoSpokenQuestionId.current===question.sessionQuestionId)return;
+    const generation=++autoSpeechGeneration.current;
+    autoSpeechTimer.current=window.setTimeout(()=>{
+      autoSpeechTimer.current=null;
+      autoSpokenQuestionId.current=question.sessionQuestionId;
+      void (async()=>{
+        await playQuestionIntroChime();
+        if(generation!==autoSpeechGeneration.current)return;
+        try {
+          await playBrowserQuestionSpeech({text:question.questionText,visemes:question.ttsVisemes});
+        } catch {
+          if(generation===autoSpeechGeneration.current)setMessage("자동 재생이 되지 않으면 다시 듣기를 눌러 주세요.");
+        }
+      })();
+    },300);
+    return ()=>{
+      if(generation===autoSpeechGeneration.current)autoSpeechGeneration.current+=1;
+      if(autoSpeechTimer.current!==null){window.clearTimeout(autoSpeechTimer.current);autoSpeechTimer.current=null;}
+    };
+  },[question]);
+  useEffect(()=>()=>{
+    autoSpeechGeneration.current+=1;
+    if(autoSpeechTimer.current!==null)window.clearTimeout(autoSpeechTimer.current);
+    stopCharacterSpeech();
+  },[]);
+
+  function cancelAutoSpeech(){
+    autoSpeechGeneration.current+=1;
+    if(autoSpeechTimer.current!==null){window.clearTimeout(autoSpeechTimer.current);autoSpeechTimer.current=null;}
+  }
 
   async function startRecording(){
     if(!question||!session)return;
+    cancelAutoSpeech();
+    stopCharacterSpeech();
     if(!navigator.mediaDevices?.getUserMedia){setStatus("error");setMessage("이 브라우저에서는 마이크 녹음을 지원하지 않아요.");return;}
     try {
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -55,6 +89,8 @@ export default function QuizPage() {
   function recordAgain(){setDraft(null);setStatus("idle");setMessage("좋아요! 버튼을 누르고 다시 말해보세요.");}
   async function requestHint(){
     if(!session||!question)return;
+    cancelAutoSpeech();
+    stopCharacterSpeech();
     setHintThinking(true);
     try {
       const data=await api.hint(session.sessionId,question.questionId);
@@ -66,7 +102,7 @@ export default function QuizPage() {
       setHintThinking(false);
     }
   }
-  function replay(){if(question)playBrowserQuestionSpeech({text:question.questionText,visemes:question.ttsVisemes}).catch(error=>setMessage(`문제 음성 재생 실패 (${error instanceof Error?error.message:"UNKNOWN"})`));}
+  function replay(){if(question){cancelAutoSpeech();playBrowserQuestionSpeech({text:question.questionText,visemes:question.ttsVisemes}).catch(error=>setMessage(`문제 음성 재생 실패 (${error instanceof Error?error.message:"UNKNOWN"})`));}}
   const progress=question?Math.round(question.questionIndex/question.totalQuestionCount*100):0;
   return <main className="page-shell"><div className="container">
     <header className="flex min-h-[88px] items-center gap-5"><Link onClick={stopCharacterSpeech} href="/setup" className="btn btn-ghost">✕ 나가기</Link><div className="flex-1"><div className="mb-2 flex justify-between text-sm font-extrabold"><span>문제 {question?.questionIndex??"-"} / {question?.totalQuestionCount??"-"}</span><span className="text-(--accent)">{progress}%</span></div><div className="progress"><span style={{width:`${progress}%`}}/></div></div><span className="pill bg-(--warn-bg) text-(--star-text)">★ {Math.max(0,(question?.questionIndex??1)-1)}</span></header>
