@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Buddy, Topbar } from "./components";
 import { HomeGreetingBubble } from "./home-greeting-bubble";
+import { HowItWorks } from "./how-it-works";
 
 export default function HomePage() {
   return (
@@ -36,20 +37,7 @@ export default function HomePage() {
           </div>
         </section>
       </div>
-      <section className="home-section">
-        <div className="container">
-          <div className="home-section-title">
-            <p className="eyebrow">How it works</p>
-            <h2 className="title mt-3">듣고, 말하고, 바로 성장해요</h2>
-            <p className="subtitle mt-4">복잡한 공부 대신 짧고 즐거운 말하기 루틴을 만들어요.</p>
-          </div>
-          <div className="home-steps">
-            <article className="card home-step"><span className="home-step-number">1</span><h3>봄이의 질문 듣기</h3><p>아이의 학년과 수준에 맞는 문제를 또렷한 음성으로 들어요.</p></article>
-            <article className="card home-step"><span className="home-step-number">2</span><h3>버튼 누르고 말하기</h3><p>틀릴 걱정 없이 마이크를 누르고 영어로 편하게 대답해요.</p></article>
-            <article className="card home-step"><span className="home-step-number">3</span><h3>칭찬과 별 받기</h3><p>바로 도착한 친절한 피드백을 듣고 작은 성취를 쌓아요.</p></article>
-          </div>
-        </div>
-      </section>
+      <HowItWorks />
     </main>
   );
 }
