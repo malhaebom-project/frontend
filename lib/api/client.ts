@@ -242,7 +242,15 @@ export const api = {
   followUp: (sessionId: number, sessionQuestionId: number, answerId: number) =>
     request<FollowUpQuestion>(`/learning-sessions/${sessionId}/questions/${sessionQuestionId}/follow-up`, { method: "POST", body: JSON.stringify({ answerId }) }),
   questionTts: (questionId: number) => request<QuestionTts>(`/questions/${questionId}/tts`),
-  history: (childId: number, query = "") => request<LearningHistory>(`/children/${childId}/learning-history${query}`),
+  history: (childId: number, query: { page?: number; size?: number; startDate?: string; endDate?: string } = {}) => {
+    const params = new URLSearchParams();
+    if(query.page!=null)params.set("page",String(query.page));
+    if(query.size!=null)params.set("size",String(query.size));
+    if(query.startDate)params.set("startDate",query.startDate);
+    if(query.endDate)params.set("endDate",query.endDate);
+    const suffix=params.size?`?${params.toString()}`:"";
+    return request<LearningHistory>(`/children/${childId}/learning-history${suffix}`);
+  },
   statistics: (childId: number) => request<Statistics>(`/children/${childId}/statistics`),
   wrongAnswers: (childId: number) => request<WrongAnswer[]>(`/children/${childId}/wrong-answers`),
   adminQuestions: (query = "") => request<PageData<AdminQuestion>>(`/admin/questions${query}`),
